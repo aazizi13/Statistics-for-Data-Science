@@ -1,0 +1,241 @@
+---
+title: "HW week 12"
+author: "w203 teaching team"
+subtitle: 'w203: Statistics for Data Science'
+
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r load packages, message = FALSE}
+
+library(tidyverse)
+library(ggplot2) 
+
+library(sandwich)
+library(stargazer)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r source functions from project, echo = FALSE}
+source('./src/load_and_clean.R')
+source('./src/get_robust_se.R')
+```
+
+```{r load data} 
+d <- load_and_clean(input = 'videos.txt')
+```
+# Regression analysis of YouTube dataset
+
+You want to explain how much the quality of a video affects the number of views it receives on social media. In a world where people can now buy followers and likes, would such an investment increase the number of views that their content receives?  **This is a causal question.** 
+
+You will use a dataset created by Cheng, Dale and Liu at Simon Fraser University.  It includes observations about 9618 videos shared on YouTube.  Please see [this link](http://netsg.cs.sfu.ca/youtubedata/) for details about how the data was collected.
+
+You will use the following variables:
+
+- `views`: the number of views by YouTube users.
+- `average_rating`: This is the average of the ratings that the video received, it is a renamed feature from `rate` that is provided in the original dataset. (Notice that this is different from `cout_of_ratings` which is a count of the total number of ratings that a video has received. 
+- `length:` the duration of the video in seconds.
+
+a. Perform a brief exploratory data analysis on the data to discover patterns, outliers, or wrong data entries and summarize your findings.
+
+
+> Next let's take a look at "average_rating" column. 
+
+```{r}
+sum(is.na(d$average_rating))
+```
+```{r}
+d <- d[!is.na(d$average_rating),]
+```
+
+
+
+```{r, warning=FALSE, message=FALSE}
+d_rate <-ggplot(data=d, aes(x=average_rating)) +
+  stat_bin() +
+  labs(title="Histogram of Rate ", x="rate")
+d_rate
+```
+>"Average_rating" column seems to be in likert Scale
+>Zero rating means that the video has not been rated. 
+>Since having a zero "average_rating" does not tell us anything about the quality. I will go ahead and delete all the "average_ratings" with zero score. 
+
+```{r}
+d <- d[d$average_rating != "0", ]
+```
+
+> Let's look at the graph again. 
+
+```{r}
+d_rate <-ggplot(data=d, aes(x=average_rating)) +
+  stat_bin() +
+  labs(title="Histogram of Rate ", x="rate")
+d_rate
+```
+
+
+
+>Let's look at the length
+>I converted all the lengths to mins. Looking at the graph, we can see that they are outliers and the bulk of videos have length that is less than 11 mins. 
+
+```{r, warning=FALSE, message=FALSE}
+d_length <-ggplot(data=d, aes(x=length/60)) +
+  geom_histogram(binwidth = 0.15) +
+  labs(title="Histogram of Length ", x="length")
+d_length
+```
+>Removing anything above 11 mins 
+
+```{r}
+# remove 11+ minute videos
+d <- d[d$length <= 660,]
+```
+
+>let's look at the graph again 
+
+```{r, warning=FALSE, message=FALSE}
+d_length <-ggplot(data=d, aes(x=length/60)) +
+  geom_histogram(binwidth = 0.15) +
+  labs(title="Histogram of Length ", x="length")
+d_length
+```
+
+
+> let's take a look at views.  
+
+```{r conduct EDA in this chunk}
+#How many video_ids have less than 11-digit unique string
+sum(nchar(as.character(d$video_id)) != 11)
+```
+
+```{r}
+#How many vidoe_ids have "#NAME" instead of 11-digit unique string. 
+sum(d$video_id == "#NAME?")
+```
+
+```{r}
+#are there any NAs in views column
+sum(is.na(d$views))
+```
+
+```{r}
+#removing the 9 NA values 
+d <- d[!is.na(d$views),]
+```
+
+> Let's look at the graph. 
+
+```{r, warning=FALSE,message=FALSE}
+d_view <-ggplot(data=d, aes(x=log(views))) +
+  stat_bin() +
+  labs(title="Histogram of View ", x="log(views)")
+d_view
+```
+> I transformed the "view" column into log format to better visualize it, and we can see that it is normally distributed. 
+
+
+> 'What did you learn from your EDA? Cut this quoted text and describe your analysis in the quote block.'
+
+b. Based on your EDA, select an appropriate variable transformation (if any) to apply to each of your three variables.  You will fit a model of the type,
+
+$$
+  f(\text{views}) = \beta_0 + \beta_1 g(\text{rate})  + \beta_3 h(\text{length})
+$$ 
+
+Where $f$, $g$ and $h$ are sensible transformations, which might include making *no* transformation. 
+
+```{r fit a regression model here, warning=FALSE, message=FALSE}
+#transforming the length column to mins 
+
+d$length_mins <- d$length/60
+model <- lm(log(views) ~ average_rating + length_mins, data=d)
+
+summary(model)
+```
+```{r}
+plot(model)
+```
+
+
+c. Using diagnostic plots, background knowledge, and statistical tests, assess all five assumptions of the CLM. When an assumption is violated, state what response you will take.  As part of this process, you should decide what transformation (if any) to apply to each variable. Iterate against your model until your satisfied that at least four of the five assumption have been reasonably addressed. 
+
+> 1. **IID Data:** 
+
+> Given the explanation of the data collection, the researchers looked at all youtube videos and used a breadth-first search method. This fullfills the IID. 
+
+
+> 2. **No Perfect Colinearity:**  
+
+>I run a correlation test below between variables, and we can see that correlation is pretty weak and not at all perfect colinear. 
+
+
+```{r}
+cor.test(d$average_rating, d$length, method = "pearson")
+```
+```{r, warning=FALSE, message=FALSE}
+plot(resid(model),type="b", main="Correlation of Residuals")+   
+abline(h=0,lwd=2, type="dashed", col=2)
+```
+
+
+
+> 3. **Linear Conditional Expectation:**
+
+>Looking at plot_1 below, we can clearly see that there is a linear relation, thus this assumption is fullfiled. 
+
+```{r code and plots assessing linear conditional expectation}
+
+d <- d %>% 
+  mutate(
+    model_predictions = predict(model), 
+    model_residuals   = resid(model),
+  )
+```
+
+```{r, warning=FALSE, message=FALSE}
+plot_1 <- d %>% 
+  ggplot(aes(x = model_predictions, y = model_residuals)) + 
+  geom_point() + stat_smooth() + 
+  labs(title = 'There is a linear relationship')
+
+plot_1
+```
+
+
+> 4. **Homoskedastic Errors:** 
+
+>Looking at plot_2, we can see that there seems to be some heterskesadity. In other words, as we move to the right side of x axis, we can see that the residulas are concentrating more. 
+
+>I run the bptest and we can can reject the null hypothesis. Null hypothesis being there is no evidence for heteroskedastic error. Looking at the p-value from our test, we can reject the null hypothesis. 
+
+```{r}
+plot_2 <- d %>% 
+  ggplot(aes(x = model_predictions, y = model_residuals)) + 
+  geom_point()
+plot_2
+
+```
+
+
+```{r}
+#install.packages("lmtest")
+lmtest::bptest(model)
+```
+
+
+> 5. **Normally Distributed Errors:** 
+
+>Looking at the qqPlot, we can see that the shape is almost normal, except that it has thin tails. However, since we have a much larger sample than the 30 that we need for CLM, we can go ahead and apply CLM with no issues. 
+
+
+```{r code and plots assessing normally distributed errors}
+library(car)
+qqPlot(model)
+```
+
+

@@ -1,0 +1,450 @@
+---
+title: "HW week 12 - Solution"
+author: "Kevin Martin"
+subtitle: 'w203: Statistics for Data Science'
+
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# import some libraries
+library(ggplot2)     #fancier plotting
+library(gridExtra)   #grids for fancier plotting.
+
+library(sandwich)    #needed for heteroskedasticity-robust standard errors
+library(lmtest)      #needed for heterosketasticity-robust standard errors
+library(car)         #has the scatterplotMatrix() command
+library(stargazer)   #needed for model specification table
+```
+
+# Regression analysis of YouTube dataset
+
+YouTube is the most popular free video-sharing website today. In this assignment, we will use a linear regression framework to analyze how the number of views is affected by video quality and video length. 
+
+## Part a. Exploratory Data Analysis
+
+Here I perform a brief exploratory data analysis to discover patterns, outliers, and/or wrong data entries
+
+```{r read_data}
+# Read in the video data from the flat file
+vids <- read.delim("videos.txt")
+```
+
+### video_id field
+
+#### What is video_id
+
+the video_id is an eleven character long identification string. To get to the video in question, you would enter it in a youtube url as such:
+
+> https://www.youtube.com/watch?v=<video_id\>
+
+#### Issues with video_id data
+
+There are 129 videos missing the video id. "#NAME?" is shown in place of the id. This was not an issue with R reading in the file. The #NAME? entries are visible in the original text file.
+
+``` {r count_names}
+# count of videos where video_id is "#NAME?"
+sum(vids$video_id == "#NAME?")
+
+# count of videos where the video_id is not 11 characters long
+sum(nchar(as.character(vids$video_id)) != 11)
+```
+
+### views field
+
+#### What is views?
+
+views is the number of times that a video has been viewed. Youtube tends to be cagey on what exactly constitutes a view and the definition has changed over time. Nowadays a view is when a video is watched on the youtube platform for more than 30 seconds where youtube has determined that the viewer is a human, not a robot. (source: [tubics](https://www.tubics.com/blog/what-counts-as-a-view-on-youtube/))
+
+#### Issues with views data
+
+There are 9 rows where the videos with missing views (NA value) (along with all other information). When the videos get looked up by video_id all of these videos were deleted, presumably that's why the information couldn't be found.
+
+``` {r missing_views}
+sum(is.na(vids$views))
+```
+
+#### Description of views
+
+As can be seen in the figures and summary statistics below the views data is highly non-normal. There is a strong skew to the right where there are a few videos with hunreds of thousands of views, meanwhile, the median video in the set has only been viewed around 1500 times. To address this skew we try looking at the ln(views).
+
+We see that the ln(views) is actually very normal. This normality is confirmed by looking at the qqplot. We see that the skew has almost vanished. The mean and the median for the ln(views) differ by less than a percent. The curve is somewhat more pinched than a true normal curve. On the left side this is explained by a hard lower limit of 1 view to the videos. The normal curve would expect values left of zero, we can't actually have such values because you need to take a log of a fractional number to get them. At the upper end, we would have to see a few videos in the 3 million view range to get out to fill out the tail of a normal function.  
+
+``` {r EDA_view, echo=FALSE}
+
+#make histogram of views
+vHist<-ggplot(data=vids, aes(x=views)) +
+  geom_histogram(breaks=seq(-0.5, 20000.5, by=100), fill="black", alpha = .5, 
+                 aes(y=100*..count../sum(..count..))) +  # scales y axis to percent
+  scale_y_continuous(breaks = seq(0,8, by=1), limits=c(0,8)) +
+  labs(title="Histogram of views", x="number of views",
+       y="Percent of videos")
+
+#make histogram of the natural log of views
+vLnHist<-ggplot(data=vids, aes(x=log(views))) +
+  geom_histogram(breaks=seq(-0.5, 15.5, by=1), fill="black", alpha = .5, 
+                 aes(y=100*..count../sum(..count..))) +  # scales y axis to percent
+  scale_y_continuous(breaks = seq(0,20, by=2), limits=c(0,20)) +
+  labs(title="Histogram of ln(views)", x="natural log of number of views",
+       y="Percent of videos")
+
+# make a normal quantile-quantile plot for the number of views
+qqView <- ggplot(vids, aes(sample = vids$views)) + geom_qq(distribution = qnorm) + 
+           geom_qq_line(line.p = c(0.25, 0.75), col = "blue") + labs(y="views", title="qq normal plot of views") 
+
+# make a normal quantile-quantile plot for the natrual log of the number of views
+qqLog <- ggplot(vids, aes(sample = log(vids$views))) + geom_qq(distribution = qnorm) + 
+           geom_qq_line(line.p = c(0.25, 0.75), col = "blue") + labs(y="ln(views)", title="qq normal plot of ln(views)")
+
+# output the plots
+options(repr.plot.width=7.5, repr.plot.height=2)
+suppressWarnings(grid.arrange(vHist, vLnHist,qqView, qqLog, ncol = 2, nrow = 2,
+             padding = unit(0.1, "line"), widths = c(1,1)))
+
+# print some summary diagnostics.
+print(sprintf("The mean number of views is %.0f",mean(vids$views, na.rm = TRUE)))
+print(sprintf("The median number of views is %.0f" ,median(vids$views, na.rm = TRUE)))
+print(sprintf("The minimum number of views is %.0f",min(vids$views, na.rm = TRUE)))
+print(sprintf("The 25th percentile video has %.0f views",quantile(vids$views, probs = 0.25, na.rm = TRUE)))
+print(sprintf("The 75th percentile video has %.0f views",quantile(vids$views, probs = 0.75, na.rm = TRUE)))
+print(sprintf("The maximum number of views is %.0f",max(vids$views, na.rm = TRUE)))
+print("")
+print(sprintf("The mean of ln(views) is %.2f",mean(log(vids$views), na.rm = TRUE)))
+print(sprintf("The median of ln(views) is %.2f",median(log(vids$views), na.rm = TRUE)))
+```
+
+### rate field
+
+#### What is rate?
+
+rate is an average rating assigned by users. Users rate videos on a 1-5 scale with 5 being better and 1 being worse. Videos that have never been rated by anyone receive a zero.
+
+It should be noted that at some point youtube switched to a thumbs up/down rating system.
+
+#### Issues with rate data
+
+The videos with missing views discussed above also have NA values in the rate field.
+
+#### Description of rate
+
+The rate is a little strange. It's actually a 5 step likert variable with a non-response category (zero). Because it's a highly subjective variable we know that the arithmetic mean is actually difficult to interpret in a meaningful way. One person's concept of a 5 star rating may be completely different than someone elses. In a similar vein, it's not clear that the difference between a 1 star and a 2 star is the same as the difference between a 3 star and a 4 star. 
+
+However, by averaging the variables, youtube has chosen to treat them as metric quantities. Furthermore, there is reason to beleive that by having many people rate each video, the differing interpretations of what might constitute a 4 star versus a 5 star video will wash out. So, we opt to treat this as a metric variable. 
+
+In treating this as a metric variable, we now have to be careful with what is done with zero rated videos. A zero rating means that a video was not rated. Zero rated videos are not necessarily poor quality. They are unknown quality. Some unrated videos have many many views, one of them is the 99th percentile for views; that doesn't speak to a poor quality video quality. I think that at this time in youtube's history, you could disable ratings. That's what appears to have happened for many videos in this set. 
+
+For purposes of the regression, so that I don't have all of these videos showing up as poor quality, and so that I don't have to throw out all of hte videos that weren't rated, **I will assign them a value of 4.43**, which is the mean rating of the rated videos. note that this is lower than the median. I think it's okay to use the lower of mean and median because, lets face it, if you had confidence in your video's quality, I feel like you wouldn't turn off ratings.  
+
+``` {r EDA_rate, echo=FALSE}
+
+#make histogram of rate
+rHist<-ggplot(data=vids, aes(x=vids$rate)) +
+  geom_histogram(breaks=seq(-0.05, 5.05, by=.1), fill="black", alpha = .5, 
+                 aes(y=100*..count../sum(..count..))) +  # scales y axis to percent
+  scale_y_continuous(breaks = seq(0,40, by=5), limits=c(0,40)) +
+  labs(title="Histogram of rating", x="rating (0 is not rated)",
+       y="Percent of videos")
+
+# make a normal quantile-quantile plot for the rate (not including zero rated)
+qqRate <- ggplot(vids[vids$rate !=0,], aes(sample = vids[vids$rate !=0,"rate"])) + geom_qq(distribution = qnorm) + 
+           geom_qq_line(line.p = c(0.25, 0.75), col = "blue") + labs(y="rating", title="qq normal plot of rating\n (rated videos only)") 
+
+# output the plots
+options(repr.plot.width=7.5, repr.plot.height=2)
+suppressWarnings(grid.arrange(rHist, qqRate, ncol = 2, nrow = 1,
+             padding = unit(0.1, "line"), widths = c(1,1)))
+
+# print some summary diagnostics.
+print(sprintf("The number of videos with a rating of zero is %.0f",sum(vids$rate==0, na.rm = TRUE)))
+print(sprintf("The number of videos with zero ratings is %.0f",sum(vids$ratings==0, na.rm = TRUE)))
+print(sprintf("The maximum number of views for a video with zero ratings is %.0f views",max(vids[vids$rate ==0,"views"], na.rm = TRUE)))
+print(sprintf("The 99th percentile video (in terms of views) has %.0f views",quantile(vids$views, probs = 0.99, na.rm = TRUE)))
+print("")
+print(sprintf("The mean rating (videos with ratings only) is %.2f",mean(vids[vids$rate !=0,"rate"], na.rm = TRUE)))
+print(sprintf("The median rating (videos with ratings only) is %.2f" ,median(vids[vids$rate !=0,"rate"], na.rm = TRUE)))
+print(sprintf("The minimum rating (videos with ratings only) is %.2f",min(vids[vids$rate !=0,"rate"], na.rm = TRUE)))
+print(sprintf("The 25th percentile video (videos with ratings only) has a %.2f rating",quantile(vids[vids$rate !=0,"rate"], probs = 0.25, na.rm = TRUE)))
+print(sprintf("The 75th percentile video (videos with ratings only) has a %.2f rating",quantile(vids[vids$rate !=0,"rate"], probs = 0.75, na.rm = TRUE)))
+print(sprintf("The maximum rating (videos with ratings only) is %.2f",max(vids[vids$rate !=0,"rate"], na.rm = TRUE)))
+print(sprintf("%.1f percent of rated videos have a 5.0 rating",100.0*sum(vids$rate == 5, na.rm = TRUE)/sum(vids$rate!=0, na.rm = TRUE)))
+```
+
+### length field
+
+#### What is length
+
+length is length of the video in seconds. 
+
+Video length is natively in seconds, but it is presented in minutes in the discussion and figures below so as to increase comprehensibility.
+
+#### Issues with length data
+
+the same 9 videos that are missing rate and views are also missing the length
+
+#### Description of length data
+
+Videos vary from a length of 1 second to an hour and 28 minutes. However, only half a percent of videos are longer than 11 minutes. Those videos that are longer than 11 minutes seem to come exclsively from large "verified" organizations and media outlets. We see uploaders like 'tokyomx' (a Tokyo based television broadcaster) 'CharlieRose' (a television pundit), and "GoogleDevelopers" (The site owner themselves)
+
+The fact that the videos are cut off at 0 seconds on the left side and at 11 minutes on the right side (for the most part) mean that the data is very non-normal. 
+
+The videos longer than 11 minutes are considerable outliers. These points will have a lot of leverage becasue they are an order of magnitude longer than the typical video. We also know that these long videos have a common chararacteristic that they are tied to larger companies and likely have a built-in audience in a way that the typical youtube video does not. Any variation that we see tied to these videos could be reasonably ascribed to the fact that they are tied to these larger entities more than the fact that they are long. We can clearly see this effect at work when we look at the median views for a 10-11 minute video and compare them to the median views for an 11-12 minute video. The median 11-12 minute video has 5 times the views of the median 10-11 minute video.
+
+This substatnial difference in the population of videos longer than 11 minutes and those shorter than 11 minutes challenges CLM assumptions 2 and 4. CLM assumption 2 is that the observations are a product of random sampling; this is not true for the videos longer than 11 minutes. There is a certain renown threshold that needs to be passed in order to be able to post videos longer than 11 minutes. This means that we know there is bias in these observations. CLM assumption 4 is that populaiton error is has na expected value of zero. In this case, error's units would be views. We know that the entities uploading longer videos have a certain level of renown and a built-in audience that is not present in the majority of videos. Since this isn't captured in the model, we know that it will bias the error and cause CLM 4 to be incorrect.
+
+To alleviate this problem which will cause our CLM assumptions to fail, **we will NOT consider videos longer than 11 minutes in this analysis**. If we want to look at videos of such length in the future, we can narrow our scope so that we are only looking at the verified users that are allowed to post videos longer than 11 minutes. In that case, we only are comparing like with like and we don't break our CLM assumptions in  an obvious way. 
+
+``` {r EDA_length, echo=FALSE}
+
+#make histogram of length
+lHist<-ggplot(data=vids, aes(x=length/60)) +
+  geom_histogram(breaks=seq(-.125, 20.125, by=.25), fill="black", alpha = .5, 
+                 aes(y=100*..count../sum(..count..))) +  # scales y axis to percent
+  scale_y_continuous(breaks = seq(0,10, by=5), limits=c(0,10)) +
+  labs(title="Histogram of length", x="length (minutes)",
+       y="Percent of videos")
+
+# #make histogram of natural log of length
+# lnlHist<-ggplot(data=vids, aes(x=log(length))) +
+#   geom_histogram(breaks=seq(-.05, 9.05, by=.1), fill="black", alpha = .5, 
+#                  aes(y=100*..count../sum(..count..))) +  # scales y axis to percent
+#   scale_y_continuous(breaks = seq(0,10, by=5), limits=c(0,10)) +
+#   labs(title="Histogram of ln(length)", x="ln(length)",
+#        y="Percent of videos")
+
+# make a normal quantile-quantile plot for the length
+qqLen <- ggplot(vids, aes(sample = vids$length/60)) + geom_qq(distribution = qnorm) + 
+           geom_qq_line(line.p = c(0.25, 0.75), col = "blue") + labs(y="length (minutes)", title="qq normal plot of length") 
+
+# output the plots
+options(repr.plot.width=7.5, repr.plot.height=2)
+suppressWarnings(grid.arrange(lHist, qqLen, ncol = 2, nrow = 1,
+             padding = unit(0.1, "line"), widths = c(1,1)))
+
+# print some summary diagnostics.
+print(sprintf("%.0f videos are longer than 11 minutes.",sum(vids$length > 660, na.rm = TRUE)))
+print(sprintf("%.1f percent of videos are longer than 11 minutes.",100.0*sum(vids$length > 660, na.rm = TRUE)/sum(!is.na(vids$length))))
+print(sprintf("%.1f percent of videos that are longer than 11 minutes were uploaded by 'GoogleDevelopers'.",100.0*sum(vids$length > 660 & vids$uploader == 'GoogleDevelopers', na.rm = TRUE)/sum(vids$length > 660, na.rm = TRUE)))
+print("")
+print(sprintf("The median number of views for videos over 11 minutes is %.0f",median(vids[vids$length > 660,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views for videos under 11 minutes is %.0f",median(vids[vids$length <= 660,"views"], na.rm = TRUE)))
+print("")
+print(sprintf("The median number of views 0-2 minute videos is %.0f",median(vids[vids$length <= 2*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 2-4 minute videos is %.0f",median(vids[vids$length > 2*60 & vids$length <= 4*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 4-6 minute videos is %.0f",median(vids[vids$length > 4*60 & vids$length <= 6*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 6-8 minute videos is %.0f",median(vids[vids$length > 6*60 & vids$length <= 8*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 8-10 minute videos is %.0f",median(vids[vids$length > 8*60 & vids$length <= 10*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 10-11 minute videos is %.0f",median(vids[vids$length > 10*60 & vids$length <= 11*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 11-12 minute videos is %.0f",median(vids[vids$length > 11*60 & vids$length <= 12*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 12-14 minute videos is %.0f",median(vids[vids$length > 12*60 & vids$length <= 14*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 14-18 minute videos is %.0f",median(vids[vids$length > 14*60 & vids$length <= 18*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 18-26 minute videos is %.0f",median(vids[vids$length > 18*60 & vids$length <= 26*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 26-42 minute videos is %.0f",median(vids[vids$length > 26*60 & vids$length <= 42*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views 42-74 minute videos is %.0f",median(vids[vids$length > 42*60 & vids$length <= 74*60,"views"], na.rm = TRUE)))
+print(sprintf("The median number of views over 74 minute videos is %.0f",median(vids[vids$length > 74*60, "views"] , na.rm = TRUE)))
+print("")
+print(sprintf("The mean length is %.2f minutes",mean(vids$length, na.rm = TRUE)/60))
+print(sprintf("The median length is %.2f minutes" ,median(vids$length, na.rm = TRUE)/60))
+print(sprintf("The 1 %% trimmed mean length is %.2f minutes (1 %% trimmed from each end)" , mean(vids$length, trim = 0.01, na.rm = TRUE)/60))
+print("")
+print(sprintf("The minimum length is %.2f minutes",min(vids$length, na.rm = TRUE)/60))
+print(sprintf("The 25th percentile video is %.2f minutes long",quantile(vids$length, probs = 0.25, na.rm = TRUE)/60))
+print(sprintf("The 75th percentile video is %.2f minutes long" ,quantile(vids$length, probs = 0.75, na.rm = TRUE)/60))
+print(sprintf("The maximum length is %.2f minutes",max(vids$length, na.rm = TRUE)/60))
+```
+
+### Cleanup
+
+The 9 videos that have NA views, rating, etc are removed from the data set because they contain no useful information. 
+
+The 1490 videos that have a zero rating (have not been rated) will get an imputed rating of 4.43, which is the mean rating that all rated videos recieved. As discussed in the rating section, the lack of rating does not signal a poor quality video, it is just a video where the quality is unknown. In absence of information, we will use the average.
+
+The 51 videos that have a length over 11 minutes are removed from the data set. These videos have a lot of leverage AND they differ from the population of videos under 11 minutes in some critical ways. All videos over 11 minutes were poseted by corporations and media companies that presumably have built in followers. At this point in its history youtube restricted the ability to post such videoss to such entities. As a result of these facts, if these points were included, CLM assumptions 2 and 4 would no longer hold and the entire validity of the modeling would be called into question.
+
+``` {r cleanup}
+# remove NAs
+vids <- vids[!is.na(vids$views),]
+# remove 11+ minute videos
+vids <- vids[vids$length <= 660,]
+# assign ratings to the unrated videos
+vids[vids$rate == 0,"rate"] <- 4.43
+```
+
+### Variable relationships
+
+The plot and table  below show the relations between the various variables of interest. We will end up using the natural log of views because it is nearly perfectly normal and is generally better behaved than views itself. We'll include the log and the unlogged version of views in this investigative plot to demonstrate that the logged version works better.
+
+``` {r investigation}
+cor(cbind(log(vids$views),vids$views,vids$rate,vids$length,deparse.level = 2))
+scatterplotMatrix(~log(vids$views) + vids$views + vids$rate + vids$length, data = NULL, plot.points = FALSE)
+```
+
+## Part b.  Model creation
+
+Estimate the following model to investigate the relationship between views and regressors further.
+
+$$ f(views) = \beta_0 + \beta_1 g(rate)  + \beta_3 h(length)$$
+
+``` {r make_model}
+# add a vector for length in minues to improve interpretability
+vids$lenMin <- vids$length/60
+# create model
+model1 <- lm(log(views) ~ rate + lenMin, data=vids)
+# create model diagnostic plots
+plot(model1)
+# print summary statistics for model
+print("Model Summary Data - Non-heteroskedasticity-robust Standard Errors")
+summary(model1)
+print("Coefficients with Heteroskedasticity-robust Standard Errors")
+coeftest(model1, vcov = vcovHC)
+# Test model normality
+print("Formal Test of Residual Normality")
+set.seed(56423)
+shapiro.test(sample(model1$residuals, size = 5000,replace=TRUE))
+print("Formal Test of Heteroskedasticity")
+bptest(model1)
+
+# ## Quadratic model (not used)
+# # add a vector for length in minues to improve interpretability
+# lenMin <- vids$length/60
+# # define squared variables
+# rate2 <- vids$rate^2
+# len2 <- vids$length^2
+# # create model
+# model2 <- lm(log(vids$views) ~ vids$rate + rate2 + lenMin + len2)
+# # create model diagnostic plots
+# plot(model2)
+# # print summary statistics for model
+# summary(model2)
+
+# ## log everything model (not used)
+# # add a vector for length in minues to improve interpretability
+# lenMin <- vids$length/60
+# # define squared variables
+# rate2 <- vids$rate^2
+# len2 <- vids$length^2
+# # create model
+# model3 <- lm(log(vids$views) ~ log(vids$rate) + log(lenMin))
+# # create model diagnostic plots
+# plot(model3)
+# # print summary statistics for model
+# summary(model3)
+
+### Note: highlight multiple lines and press Cmd + Shift + C to comment/uncomment selected lines
+```
+
+## Part c. Assess the CLM Assumptions
+
+Using diagnostic plots, background knowledge, and statistical tests, assess all six assumptions of the CLM. When an assumption is violated, state what response you will take.
+
+- When you check zero conditional mean assumption, identify one omitted variable that is not within this dataset, and estimate whether they are biasing the effect you measure towards zero or away from zero.
+
+### Assumption 1
+
+The model of the population is linear in parameters.
+
+> We can see that the model is indeed linear in parameters. We have defined it as such.  Even though the outcome variable has been transformed, the transformed quanities have the property of linearity. 
+>
+>In terms of appropriateness, we see that the population is reasonably well represented by the linear modeling assumptions. That is to say, the residuals are equally spread about the model . It does not appear that the model would greatly improve its predictions of the population by being nonlinear.
+
+### Assumption 2
+
+The observations used to create the model are a product of random sampling.
+
+> We don't actaully know the source of this data, so we can't say whether the collection of this data was random or not. 
+>
+> As discussed in the 'length' variable section, we decided to exclude videos longer than 11 minutes because at the time youtube had restricted the upload of such videos to large entities such as TV stations and gooogle itself which presumably already had some sort of built in followers. This caused the videos longer than 11 minutes ot have fundamentally different qualities (in unmeasured variables) than the typical youtube. 
+
+### Assumption 3
+
+There is no perfect colinearity amongst the variables tested. 
+
+> We see from the scatterplot matrix that there is no perfect multicolinearity amongst the variables. From the correlation test, we see that the correlation between the various variables is actually pretty weak. The correlation between the expanatory variables is only about 15%. This is good since ever, strong, but imperfect colinearity between expanatory variables will reduce precsion of model estimates.
+
+### Assumption 4
+
+The error $u$ has an exepected value of zero.
+
+> We can see qualitatively from the residuals versus fitted plot output by `plot(v1model)` that the expected error is essentially zero over the range of the input data. There does appear to be a slight tendancy for residuals to dip below zero on on the right end, indicating that either length or ratings has diminishing returns. (that a unit change in effect is less significant at higher units). We could address this by taking the log of the input variables or by introducing a quadratic term for them. However, we will stick with our current simple linear model for a few reasons. (1) We know that indtroducing a quadriatic term will always improve fit, doing so just to improve fit is hacking unless we have a good theoretical underpinning for doing so. Furthermore it reduces interpretability of the model. With our linear model, we can say that a 1 star rating change produces an x percent change in views; we lose that type of interpretation when we go quadratic. (2) Similarly, logging the input variables after the model creation to improve fit is hacking unless there's some good theoretical basis (which we currently lack). Even so, logging the inputs does solve the zero conditional moment deviation at the right but in doing so, it introduces a more severe deviation from zero conditional mean at the left. In short our model produces a reasonably flat curve for residuals versus fitted values. 
+>
+> This means that zero conditional mean is satasfied in terms of our predictor variables. However, the chart cannot tell us if there is some larger endogeneity in our model that would cause the expected value of the error to be non-zero. We have to reason about that separately.
+>
+> The three primary sources of endogeneity are (1) omitted variables, (2) reverse causality, (3) measurement error. 
+>
+> (1) Omitted variables are a real concern **IF** they are stongly correlated with our variable of interest **AND** strongly correlated with the outcome variable. Probably the biggest omitted variable that we are missing is the effect of youtube's recommendation algorithm. We would expect videos that youtube recommends more highly and more often to have move views; therefore we assume a strong relationship between number of times a video is recommended and number of views. We would also expect that more highly rated videos are also more-often recommended, so there is likely a positive relationship there. Under this set of assumptions, the omission of the number of times a video was recommended makes our correlation coefficient higher than it would be if number of recommendations was included. Since our coefficient is positive this means that it would go towards zero. We intuit that the relationship between rating and views is weaker than our model claims. 
+>
+> (2) We can rule out reverse causality for the length variable because we took out the videos that were longer than 11 minutes. Thesehad the properties of being attached to big, well-known entities, so we could easily see a reverse-causality issue if they had been included. All users have the ability to post videos under 11 minutes. There may be some reverse causality with the rate variable. If a video is more popular, its feasible that it would get recommended more to people who like that sort of video and by being watched more and increasingly pushed to those who would like it, we can imagine that there is at least the potetnital for reverse causality where more views could lead to higher ratings. 
+>
+> (3) As discussed under assumption 2, there is reason to beleive that there is a measurement error where both deaths and cases are undercounted. However, if they are undercounted by a consitent percentage across the board (and do not vary with the chosen regressors, this should just manifest as an intercept change in our population model. The various importance of the variables would not be significantly affected. 
+>
+> Class notes from Northwestern on 3 primary sources of endogeneity (https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjS3ZDi8trqAhX3CjQIHULvCK4QFjADegQIAhAB&url=https%3A%2F%2Fcanvas.northwestern.edu%2Ffiles%2F1812459%2Fdownload%3Fdownload_frd%3D1%26verifier%3D8p0E8nRSdv03kAtFFApff0HnICVyojS9BKH00qmF&usg=AOvVaw2igQbv3dlncZt7Fpc0bSQk)
+
+
+### Assumption 5
+
+The error $u$ has the same variance given any values of the explanatory variables.
+
+> In classical linear modeling, this assumption is needed to derive the standard errors of the estimator coefficients. We see from the scale versus location plot that this assumption I would actually say that this is the MOST homoskedastic data that I have ever laid my eyes on. 
+>
+> However, it's pretty traditional at this point to use White standard error formulations that are robutst against heteroskedasticity. These will give acurate standard errors even when the residuals are heteroskedastic. This is conservative, so we use it. 
+>
+>(In a meta sense, I want to demonstrate to the grader that I know how to use them and have their use as a reference later when I go back and do other multiple linear regressions.)
+
+### Assumption 6
+
+The population error is independent of the expanatory variables and is normally distributed.
+
+> The normality assumption is needed to determine the shape of the sampling distribution for our estimator coefficients. By looking at the Normal QQ plot of the model's residuals, we see that the model is almost normal except that the tails are smaller than a normal curve. It of course fails the strict Shapiro-Wilk test of normality.
+>
+> However, even if the errors are non-normal, a version of the CLM says that the sampling distribution for the estimator coefficients becomes normal as the number of observations increases. We have 9000 observations which is two orders of magnitude more than the typical rule of thumb value of 30 where the CLM becomes applicable. Given the large nubmer of observations, we can confidently apply the CLM in this case and the spirit of the requirement is satasfied. (Spirit of requirement just wants the sampling distrubuiton of beta to be normal. CLM says it will be.)
+>
+> See assumption 4 for a discussion of possible endogeneity. 
+
+
+## Part d. Display the model specificaiton. Discuss Significance
+
+Display all your model specification in a regression table and interpret and explain your result in terms of statistical and practical significance.
+
+``` {r regression_table}
+# create a variable to hold my robust standard errors
+se.model1 <- sqrt(diag(vcovHC(model1)))
+# display the regression table with those robust errors
+suppressWarnings(stargazer(model1, type = "text", omit.stat = "f",
+          se = list(se.model1),
+          star.cutoffs = c(0.05, 0.01, 0.001)))
+```
+
+From the output model, we know our Multivariate Least Squares regression formula is:
+
+$$
+\begin{aligned}
+f(views) &= \beta_0 + \beta_1 g(rate)  + \beta_3 h(length) \\
+ln(views) &= 6.311 + 0.138 \cdot (rate) + 0.099\cdot(length(minutes)) 
+\end{aligned}
+$$
+
+All coefficients were highly statistically significantly different than zero. There is less than a 1 in 100 million chance of getting betas of this size if the actual beta is zero (based on p-value of 2e-9 rejecting the null hypotehesis that beta = 0). 
+
+The interpretation of the equation is that a video that has a 1 star increase in video rating will have 13.8% more views all else being equal. Similarly a video that is a 1 minute longer will have 9.9% more views all else being equal. 
+
+Beta 1 has a standard error of 0.023 meaning that the standard deviation of beta 1 is 0.023. We can turn this into a 95 percent confidence interval by taking $0.138 \pm 0.023 \cdot 1.96 \implies C.I._{95} = [0.093,0.183]$. This means that if we were to collect a similar sample many times, we would expect that 95 percent of such samples would have beta 1 that falls within the range $[0.093, 0.183]$
+
+Beta 2 has a standard error of 0.008 meaning that the standard deviation of beta 1 is 0.008. We can turn this into a 95 percent confidence interval by taking $0.099 \pm 0.008 \cdot 1.96 \implies C.I._{95} = [0.083,0.115]$. This means that if we were to collect a similar sample many times, we would expect that 95 percent of such samples would have beta 2 that falls within the range $[0.083,0.115]$
+
+All of this seems fine and it is indeed significant, but it misses a lot of the picture. The adjusted R squared for the regression is 0.022. This means that only 2.2 percent of the variance in the natural log of views is explained by our models. 97.8 percent of the variance is due to factors not captured in the modeling. 
+
+The fact that so little of the variance is captured by the model explains the high intercept. The intercept is 6.311. Euler's number to the power of 6.311 equals 550. This is actually less than anything that our model is capable of predicting since our corrected star rankings go from 1 to 5. So, the model would predict a zero second video with a 1 star rating to have 632 views. On the other end, an 11 minute video with a 5 star rating would have 3262 views. 
+
+Clearly, the zero minute, one star video would not have 630 views. On the other end, there are videos in the set with hundreds of thousands of views while our model maxes out a 3260. There's a lot of nuance that we're missing, and that's reflected in our low R squared.
+
+Given all of that though, we actually do have some helpful informaiton. Getting more stars actually has a definitve postivive effect on number of views as does video length. Taking these pro-tips to heart can give any of us an edge to help acheive our dreams of being a youtube star.
+
+## Acknowledgements
+
+* This guy's blog for showing me how to qqplot in ggplot
+  * https://mgimond.github.io/ES218/Week06a.html
+* This post showed how to build a quadratic model when I was having trouble
+  * https://www.theanalysisfactor.com/r-tutorial-4/

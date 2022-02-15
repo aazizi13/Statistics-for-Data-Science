@@ -1,0 +1,446 @@
+---
+title: "Lab 2: What Makes a Product Successful?"
+author: 'Ahmad Azizi, Jon Hand, Mickey Hua, Prashant Dhingra'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r load packages, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+#install.packages("pacman")
+
+pacman::p_load(tidyverse,ggplot2,GGally,gridExtra,patchwork,sandwich,kableExtra, webshot, magrittr,
+               lmtest,scales,stargazer,dplyr,reshape2,corrplot,car,PerformanceAnalytics,MLmetrics,RColorBrewer,knitr,rbokeh,ggcorrplot)
+
+webshot::install_phantomjs()
+
+theme_set(theme_minimal())
+knitr::opts_chunk$set(dpi = 300)
+```
+# Introduction
+
+Making a better wine can lead to more awards, more brand recognition, and ultimately more sales. Creating a quality wine can be tricky though, as many different factors in the vinification process can influence the end product. The climate grapes are grown, the type of grapes that are used, and how long the grapes are fermented all contribute to the ultimate flavor and quality of a wine. Additionally, classifying a wine as tasting “good” is a difficult task, since the quality of taste is not something that can be measured with any instrument.
+
+Despite these challenges, many different physicochemical properties that can be measured in a wine. We intend to use these objective chemical measurements to explain which chemicals influence the quality of the Portuguese "Vinho Verde" wine. To operationalize the concept of “quality” we will be using a variable from our dataset which is a quality rating given by wine experts in a blind taste test. These ratings are on a 0 (very bad) to 10 (very excellent) scale, based on sensory data made by wine experts with a median of at least 3 evaluations per wine. Additional chemical components contained in the wine are measured using physicochemical tests. Chemicals measured in the dataset include fixed acidity; volatile acidity; citric acid; residual sugar; chlorides; free sulfur dioxide; total sulfur dioxide; density; pH; sulphates; alcohol.
+
+By performing regression analysis, we seek to answer the following research question:
+
+> How does the percentage of alcohol in decently rated Portuguese wine affect its quality?
+
+# Data and Research Design
+
+Our data source for analysis is the “Wine Quality” dataset from the UC Irvine Machine Learning Data Repository. We utilized two data sets of observations from this source, one which contains data on red wines and one on white wines, to arrive at 6,497 distinct observations. While combining the data sources, we also created a categorical variable called “wine type” which indicates if the observation is red or white wine.
+
+Before we start our exploration, it is important to define the variables. "Table 1" shows all the variables of our data along with the first few rows of our data. From our limited understanding of chemistry, the variables are defined as follows:
+
+- *alcohol* - the percent alcohol content of the wine
+
+- *citric_acid* - weak organic acid that occurs naturally in citrus fruits and can add ‘freshness’ and flavor to wines
+
+- *chlorides* - the amount of salt in the wine
+
+- *density* - self explanatory
+
+- *fixed_acidity* - acids involved with wine that are fixed (don't evaporate readily)
+
+- *free_sulfur_dioxide* -free form of SO2 exists in equilibrium between molecular SO2 (as a dissolved gas) and bisulphate ion. It exhibits both germicidal and antioxidant properties
+
+- *volatile_acidity* - the amount free of acetic acid in wine, which at high levels can lead to an unpleasant, vinegar taste
+
+- *residual_sugar* - refers to any natural grape sugars that are leftover after fermentation stops. it’s rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet
+
+- *total_sulfur_dioxide* - amount of free and bound forms of S02
+
+- *pH* - from a winemaker’s point of view, it is a way to measure ripeness in relation to acidity
+
+- *sulphates* - a wine additive that can contribute to sulfur dioxide gas (S02) levels. It acts as an antimicrobial and antioxidant
+
+- *quality* - output variable
+
+
+# Data Exploration 
+
+```{r data cleaning, message=FALSE, echo=FALSE}
+# Load and clean data
+clean_data <- function(df){
+  red_wine_df <- read_delim("data/winequality-red.csv", delim=";", show_col_types = FALSE)
+  red_wine_df['wine_type'] <- 'red'
+  
+  white_wine_df <- read_delim("data/winequality-white.csv", delim=";", show_col_types = FALSE)
+  white_wine_df['wine_type'] <- 'white'
+  
+  wine_df <- bind_rows(red_wine_df,white_wine_df) %>% 
+    filter(quality >= 5 & quality <= 10) %>% 
+    drop_na()
+
+
+  return(wine_df)
+}
+
+wine_df <- clean_data(df)
+
+names(wine_df)[names(wine_df) == 'fixed acidity'] <- 'fixed_acidity'
+names(wine_df)[names(wine_df) == 'volatile acidity'] <- 'volat_acidity'
+names(wine_df)[names(wine_df) == 'citric acid'] <- 'citric_acid'
+names(wine_df)[names(wine_df) == 'residual sugar'] <- 'resid_sugar'
+names(wine_df)[names(wine_df) == 'free sulfur dioxide'] <- 'free_SO2'
+names(wine_df)[names(wine_df) == 'total sulfur dioxide'] <- 'total_SO2'
+
+#split into exploratory and test dfs
+total_row_count = as.integer(wine_df %>% summarise(n = n()))
+test_row_count = as.integer(round(total_row_count*0.3, 0))
+
+# set random seed so generate same split every time
+set.seed(123)
+ind <- sample(c(rep(TRUE,ceiling(nrow(wine_df)*0.7)),rep(FALSE,floor(nrow(wine_df)*0.3)))) 
+
+#used for exploration and graphing 
+exploratory_data_wine <- wine_df[!ind, ]
+
+#used for modeling
+test_data_wine <- wine_df[ind, ]
+```
+
+
+```{r, echo=FALSE}
+#dropped the wine_type for this data frame
+exploratory_data_winetype_dropped = subset(exploratory_data_wine, select = -c(wine_type))
+```
+
+As mentioned in the 'description of data' section, we have `r nrow(exploratory_data_wine)` data points across 13 columns. Since our dataset is large enough, we split our dataset into an exploration set and a testing set. The exploration set has 30% and the testing set has 70% of our data. We will use the exploration set to get an understanding of our data, build intuition and explore how the data is distributed. The testing set would be used to build our models.
+
+Out of 6497 rows in the dataset, 6251 are clean rows.  We used data 1875 for exploration and 4376 for testing/model. 
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+#This should be table 1
+options(knitr.table.format = "latex")
+head(exploratory_data_wine) %>%
+  kbl(caption = "Summary Table of Wine Dataset") %>% 
+  kable_classic(html_font = "Cambria", full_width = F)  %>%
+  kable_styling(latex_options = c("striped", "scale_down"))
+  #kable_styling(font_size = 5)
+```
+
+Next, let's take a look at the summary of our data. As shown in Table 2 we can observe some properties as follows 
+
+- Residual sugar maximum value is 22.60 g/dm^3. So, there are no sweet wines in this data set
+- There is a huge dispersion of Total SO2 from 6 to 290.
+- Alcohol level varies from 8.4 to 14.05 %
+- pH range 2.77 - 4.01
+- quality minimum value is 5 and the maximum is 9 (refer to Limitations of Model section for an explanation)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#This should be table 2. 
+options(knitr.table.format = "latex")
+summary(exploratory_data_wine) %>%
+  kbl(caption = "Summary Table of Wine Dataset") %>% 
+  kable_classic(html_font = "Cambria", full_width = F)  %>%
+  kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+Next, we wanted to see how each variable is distributed, particularly our outcome variable. From figure 1, we can see observe the following. 
+
+- Most of our variables have a roughly normal distribution
+- Most observations have values that are equal to greater than 5. 
+- Residual sugar and chlorides are skewed to the left. 
+- Sulphates mainly lie between 0.25 and 0.7
+- Most data has residual sugar less than 5. 
+
+```{r, echo=FALSE}
+
+#This should be figure 1
+histgrams <- apply(exploratory_data_winetype_dropped, 2,
+                   function(x){
+                       figure(title= "NULL", xlab = colnames(x), 
+                              width = 400, height = 250) %>%
+                       ly_hist(x,breaks = 40, freq = FALSE, 
+                               color=brewer.pal(9, "GnBu")) %>%
+                       ly_density(x)})
+
+grid_plot(histgrams, nrow=6)
+```
+
+It would be also helpful to understand the correlations of our variables with each other. Figure 2 shows a correlation plot and we can observe the following. 
+
+- Quality has the highest correlation with alcohol (0.47)
+- Alcohol has a very high correlation with density (-0.70)
+- Free SO2 has a very high correlation with total SO2(0.72)
+
+Since quality is the outcome variable, we wanted to see how each variable is correlated with quality with exception of wine type. From figure 3 and (optional table 3), we can see that alcohol and density have the highest correlation with quality; density has a negative correlation while alcohol has a high correlation. This information would be important when we are building our model. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#should be figure 2
+corr=cor(exploratory_data_winetype_dropped, method = "pearson")
+ggcorrplot(corr, hc.order = TRUE, 
+           lab = TRUE, 
+           lab_size = 3, 
+           method="square", 
+           colors = c("tomato2", "white", "springgreen3"),
+           title="Figure 2: Correlation of Variables")
+```
+
+Now we draw detail plot to show relationship of quality (outcome variable y) with individual variables e.g. alcohol, sulphates, pH, density, total_SO2.
+
+```{r, message=FALSE, warning=FALSE,echo=FALSE}
+
+#this should be figure 3.
+attach(exploratory_data_wine)
+par(mfrow=c(1,5), oma = c(1,1,1,1) + 0.1,  mar = c(3,3,1,1) + 0.1)
+
+p1 <- ggplot(aes(factor(quality), alcohol), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,alcohol), method = 'lm',color = 'red') 
+
+p2 <- ggplot(aes(factor(quality), sulphates), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,sulphates), method = 'lm',color = 'red') 
+
+p3 <- ggplot(aes(factor(quality), pH), data = exploratory_data_wine) +
+  geom_boxplot() +
+  geom_smooth(aes(quality-4,pH), method = 'lm',color = 'red') 
+
+p4 <- ggplot(aes(factor(quality), density), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,density), method = 'lm',color = 'red') 
+
+p5 <- ggplot(aes(factor(quality), total_SO2), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,total_SO2), method = 'lm',color = 'red') 
+
+p6 <- ggplot(aes(factor(quality), free_SO2), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,free_SO2), method = 'lm',color = 'red') 
+
+p7 <- ggplot(aes(factor(quality), chlorides), data = exploratory_data_wine) +
+  geom_boxplot()  +
+  geom_smooth(aes(quality-4,chlorides), method = 'lm',color = 'red') 
+
+p8 <- ggplot(aes(factor(quality), resid_sugar), data = exploratory_data_wine) +
+  geom_boxplot() +
+  geom_smooth(aes(quality-4,resid_sugar), method = 'lm',color = 'red') 
+
+p9 <- ggplot(aes(factor(quality), citric_acid), data = exploratory_data_wine) +
+  geom_boxplot() +
+  geom_smooth(aes(quality-4,citric_acid), method = 'lm',color = 'red') 
+
+p10 <- ggplot(aes(factor(quality), volat_acidity), data = exploratory_data_wine) +
+  geom_boxplot() +
+  geom_smooth(aes(quality-4,volat_acidity), method = 'lm',color = 'red') 
+
+p11 <- ggplot(aes(factor(quality), fixed_acidity), data = exploratory_data_wine) +
+  geom_boxplot() +
+  geom_smooth(aes(quality-4,fixed_acidity), method = 'lm',color = 'red') 
+
+
+detach(exploratory_data_wine)
+
+grid.arrange(p1, p2,p3,p4,p5,p6,p7,p8,p9,p10,p11, nrow = 4, ncol = 3, top = "Figure 3: Box plot to show quality with each variable")
+```
+Figure 3 above shows how individual variable relates to Quality e.g. Quality increases with an increase in Alcohol. Quality increase with a decrease in density.
+
+## Model building
+
+### Model 1
+
+$$ Quality = \beta_0 + \beta_1\cdot alcohol $$
+$\beta_0$ quality rating the variable gets with no additional input.
+$\beta_1$ would be the alcohol content coefficient. 
+
+For our first model, we only included the alcohol,
+
+Null Hypothesis : Alcohol content does not impact quality.
+Alternative Hypothesis : Alcohol content impacts quality.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+#function calculate mse
+calculate_mse <- function(model) {
+  # This function takes a model, and uses the `resid` function
+  # together with the definition of the mse to produce
+  # the MEAN of the squared errors.
+  mse <- mean(resid(model)^2)
+  return(mse)
+}
+
+print_summary_charts <- function(my_model, my_str=" ") {
+  # print model summary - coefficients, residuals, p value etc.
+  print (summary(my_model))
+  print(paste ("MSE:",calculate_mse(my_model), sep="-"))
+  
+  #draw residuals by predicted plot
+  my_residuals <- resid(my_model)
+  plot(fitted(my_model), my_residuals, main=paste("Residuals by predicted", 
+                                                  my_str, sep="-"))
+  abline(0,0)
+  
+  # draw qq norm plot
+  qqnorm(my_residuals)
+  qqline(my_residuals)
+  
+  # draw density plot
+  plot(density(my_residuals), main=paste("Density plot", my_str, sep="-"))
+}
+test_data_wine$wine_type <- as.factor(test_data_wine$wine_type)
+
+#only alcohol included
+model_1 <- lm(quality ~ alcohol, data = test_data_wine)
+print_summary_charts(model_1)
+#summary(model_1)
+```
+
+> After running our linear regression, we can see that the p-value is significant and we can reject the null hypothesis that alcohol level does not effect quality. For each alcohol percent increase, we get roughly a 0.32 increase in quality rating. 
+> The distribution of residuals seems "ok" and could potentially pass as symmetrical.  
+> The standard error seems to be very low which is great for our model. In other words, the increase in alcohol quality by an increase in alcohol percent varies by 0.008777, which seems good. 
+> Adjusted R-squared is about 0.2317. This means that roughly 23% variance found in the outcome variable(quality) can be explained by the predictable variable(alcohol).
+
+Let's see if we can improve our model by introducing additional variables.
+
+### Model 2
+
+$$ Quality = \beta_0 + \beta_1\cdot alcohol +\beta_2\cdot wine.type+\beta_3\cdot fixed.acidity+\beta_4\cdot volatile.acidity+\beta_5\cdot citric.acid+\beta_6\cdot residual_sugar+\beta_7\cdot chlorides +\beta_8\cdot total.SO2 + \beta_9\cdot pH + \beta_10\cdot sulphates $$ 
+For model 2, we decided to include all variables, except density and free_SO2. We excluded density because density has a very high correlation with alcohol and we excluded free_SO2 because free_SO2 has a very high correlation with total_SO2. In both cases, we wanted to avoid co-linearity.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+test_data_wine$wine_type <- as.factor(test_data_wine$wine_type)
+#density and free SO2 dropped because free_SO2 and total_SO2 have high correlation
+model_2 <- lm(quality ~ alcohol + wine_type+ fixed_acidity + volat_acidity + citric_acid + resid_sugar + chlorides + total_SO2 + pH + sulphates, data = test_data_wine)
+print_summary_charts(model_2)
+#summary(model_2)
+```
+
+> After running our linear regression, we can see that the p-value is significant for all variables, except wine type, fixed acidity, and citric acid. In other words, wine_type, citric and acid, and fixed acidity fail to reject the null hypothesis that these three variables do not affect quality. 
+
+> The distribution of residuals has improved and could potentially pass as symmetrical.
+> The standard errors(SDE), as expected, vary for each variable. SDE seems to have increased for alcohol, while the coefficient has increased a bit for alcohol, which is good. Volatile acidity seems to have the highest coefficient and affects the outcome variable the most. 
+> Adjusted R-squared is about 0.0.2991. This means that roughly 30% variance found in the outcome variable(quality) can be explained by the predictable variables. This could be attributed to the introduction of more variables. 
+
+
+Tweaking our model a bit will make it better. 
+
+### Model 3
+
+$$ Quality = \beta_0 + \beta_1\cdot alcohol +\beta_2\cdot wine.type+\beta_3\cdot volatile.acidity+\beta_4\cdot residual_sugar+\beta_5\cdot chlorides +\beta_6\cdot total.SO2 + \beta_7\cdot pH + \beta_8\cdot sulphates $$ 
+
+For model 3, we decided to remove variables that failed to reject the null, except wine type. In other words, we removed fixed acidity and citric acid. 
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+test_data_wine$wine_type <- as.factor(test_data_wine$wine_type)
+#density, free_SO2, citric acid, fixed acidity are dropped. 
+model_3 <- lm(quality ~ alcohol + wine_type+ volat_acidity + resid_sugar + chlorides + total_SO2 + pH + sulphates, data = test_data_wine)
+print_summary_charts((model_3))
+#summary(model_3)
+```
+> After running our linear regression, we can see that the p-value is significant for all variables, except wine type again.
+
+> The distribution of residuals has gotten a bit worse, but it could still pass as symmetrical
+> The standard errors(SDE) remain roughly the same as model 2
+> Adjusted R-squared is about 0.0.2992. This has also stayed roughly the same as the model. 
+
+
+For our last model, we will remove the wine type as well because it fails to reject the null hypothesis.
+
+### Model 4
+
+$$ Quality = \beta_0 + \beta_1\cdot alcohol +\beta_2\cdot volatile.acidity+\beta_3\cdot residual_sugar+\beta_4\cdot chlorides +\beta_5\cdot total.SO2 + \beta_6\cdot pH + \beta_7\cdot sulphates $$
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+test_data_wine$wine_type <- as.factor(test_data_wine$wine_type)
+#density, free_SO2, citric acid, fixed acidity, and wine_type are dropped. 
+model_4 <- lm(quality ~ alcohol + volat_acidity + resid_sugar + chlorides + total_SO2 + pH + sulphates, data = test_data_wine)
+print_summary_charts((model_4))
+#summary(model_4)
+```
+
+> After running our linear regression, we can see that the p-value is significant for all variables, except wine type again.
+
+> The distribution of residuals remains roughly the same as model 3, but it could still pass as symmetrical
+> The standard errors(SDE) remain roughly the same as model 3. Volatile acidity and chlorides have the highest coefficients. In other words, the amount of acetic acid in wine, which at a high level can lead to an unpleasant, vinegary taste which corresponds to volatile acidity has the highest effect on the wine. Furthermore, the level of salt in wine, which corresponds to chlorides
+> Adjusted R-squared is about 0.2992. This has also stayed roughly the same as the previous model. 
+
+Model 4 seems to be the best out of the 4 models. 
+
+Let's study the mean of squared errors(MSE) between all 4 models to gain better insight. We can see that model 1 had the best MSE, however, the difference between the MSE is roughly the same. Figure (number) shows us model 4 prediction vs residuals. Our model is roughly linear.  
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+calculate_mse(model_1)
+calculate_mse(model_2)
+calculate_mse(model_3)
+calculate_mse(model_4)
+```
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+test_data_wine <- test_data_wine %>% 
+  mutate(
+    model_4_predictions = predict(model_4), 
+    model_4_residuals   = resid(model_4)
+  )
+```
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+plot_model_4 <- test_data_wine %>%  
+  ggplot(aes(x = model_4_predictions, y = model_4_residuals)) + 
+  geom_point() + stat_smooth()
+
+plot_model_4 
+```
+
+# Results
+
+Wine quality refers to the factors that go into producing a wine, as well as the indicators or characteristics that tell you if the wine is of high quality.
+
+When you know what influences and signifies wine quality, you’ll be in a better position to make better wine products. The above exercise demonstrate how alcohol impacts wine quality.
+
+Table (number) shows the summary of all 4 models next to each other.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+test_data_wine$wine_type <- as.factor(test_data_wine$wine_type)
+
+#only alcohol included
+model_1 <- lm(quality ~ alcohol, data = test_data_wine)
+
+#density and free SO2 dropped because free_SO2 and total_SO2 have high correlation
+model_2 <- lm(quality ~ alcohol + volat_acidity + resid_sugar + chlorides + total_SO2 + pH + sulphates+ wine_type+ fixed_acidity  + citric_acid , data = test_data_wine)
+
+#density, free_SO2, citric acid, fixed acidity are dropped. 
+model_3 <- lm(quality ~ alcohol + volat_acidity + resid_sugar + chlorides + total_SO2 + pH + sulphates+ wine_type, data = test_data_wine)
+
+#density, free_SO2, citric acid, fixed acidity, and wine_type are dropped. 
+model_4 <- lm(quality ~ alcohol + volat_acidity + resid_sugar + chlorides + total_SO2 + pH + sulphates, data = test_data_wine)
+
+
+rse <- function(model) { 
+  sqrt(diag(vcovHC(model)))
+  }
+
+
+stargazer(
+   model_1, model_2, model_3, model_4,
+   type = 'text', 
+   se = list(rse(model_1), rse(model_2), rse(model_3), rse(model_4)),
+ font.size = "small",
+  align = TRUE,
+  omit.stat = c("f", "ser"),
+  column.sep.width = "-40pt"
+)
+
+```
+
+# Model Limitations
+### Statistical Limitations
+A basic limitation to our model is that we are basing the “success” of our product on an ordinal variable(quality rating). Since the quality rating is an ordinal variable in nature, the difference between ratings might not be consistent. As a result, the estimate for mean change in quality with a unit change in our inputs might not be as accurate as possible. We kept the ratings as the metric for “success” because measuring taste is subjective in nature and there was no better alternative. 
+
+Since our data has over 6,000 different wines, we can follow the large sample model assumptions. The first assumption requires that the samples are independent and identically distributed. The exact selection process for the taste test was not specified. It is possible that only decently tasting wine was selected to not subject the tasters to really disgusting tasting wine. This assumption has limitations as the wine quality only ranges from 3 to 9 with a majority of the wine ranging between 5 and 6. This means that there were no terrible wines (0-2) and most were rated at the middle of the range or higher. Because of this, our model holds no guarantees about the entire population of wines (not informative about really bad wines). Instead, it is informative of higher-rated wines (ones that are considered decent to great). To account for this, we decided to only use wines rated 5 and higher. By reframing our research question to only focus on highly rated wines, we can still model for alcohol levels in wines and still have our focus applicable to the quality of wine that we want to emulate. 
+The other assumption is that the best linear predictor must exist. The distribution of average rating for decent wines looks reasonably well behaved. The Central Limit Theorem should work and will satisfy the assumptions necessary for the large-sample model to produce consistent estimates. 
+
+### Structural Limitations
+One important omitted variable is how long the wine matured. The longer the wine matures, the smoother the wine, leading to a better taste and over higher rating. As the wine age increases, more phenolic compounds link, and the wine's primary flavor can fade. This can lead to wines with a heavier alcohol content having a less pronounced alcoholic flavor. Because the omitted variable (age of the wine) has a positive effect on the quality of the wine, but also a negative effect on the alcohol variable, it pushes the estimator (beta_alcohol) toward zero. Since the effect is toward zero, omitting the age of the wine does not call any of the results into question. 
+
+# Conclusion
+Improving the quality of a wine is a massive topic. Countless books, essays, and papers exist on the subject. The above exercise is built the assumption that wine quality is easier to detect than define. Second assumption is that quality is explainable and can be improved by knowing factors that makes it more enjoyable. In a future study, we could use sales data as a replacement metric for "success."
+
+Our study focused on alcohol and the role it played in improving the quality of highly rated Portuguese wines. We found that wine experts preferred a higher alcohol content in their wines as the coefficient for alcohol was positive. We also found several other factors that contributed to the quality rating of the wines. We hope our findings will allow the company to improve the production success of their wine product.

@@ -1,0 +1,1164 @@
+
+<!-- saved from url=(0035)http://netsg.cs.sfu.ca/youtubedata/ -->
+<html><script type="text/javascript">window["_gaUserPrefs"] = { ioo : function() { return true; } }</script><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>YouTube Dataset</title>
+<style type="text/css">
+<!--
+body,td,th {
+    font-family: Times New Roman, Times, serif;
+    font-size: 14px;
+}
+.TITLE {
+    font-size: 24px;
+    font-weight: bold;
+}
+.AUTHOR {font-size: 16px; font-family: Arial, Helvetica, sans-serif; }
+.SECTION {
+    font-size: 16px;
+    font-weight: bold;
+}
+-->
+</style>
+<!--<base target="_blank">--><base href="." target="_blank">
+</head>
+
+<body>
+<center>
+  <p align="center" class="TITLE">Dataset for "Statistics and Social Network of YouTube Videos"</p>
+  <table width="400" border="0">
+    <tbody><tr>
+      <td colspan="2" class="AUTHOR"><center>
+        <a href="http://www.cs.sfu.ca/~xuc/personal/">Xu Cheng</a> and <a href="http://www.camrdale.org/">Cameron Dale</a> and <a href="http://www.cs.sfu.ca/~jcliu/">Jiangchuan Liu</a>
+      </center></td>
+    </tr>
+    <tr>
+      <td colspan="2" class="AUTHOR"><center>
+        {xuc, camerond, jcliu} [at] cs [dot] sfu [dot] ca
+      </center></td>
+    </tr>
+    <tr>
+      <td colspan="2" class="AUTHOR"><center>School of Computing Science<br>
+        Simon Fraser University<br>
+      British Columbia, Canada
+      </center></td>
+    </tr>
+  </tbody></table>
+  <p><strong>NOTE: The datasets presented below are for academic use only.</strong></p>
+  <table width="800" border="0">
+    <tbody><tr>
+      <td>
+        <p align="left" class="SECTION">1. Datasets of Normal Crawl</p>
+        <p align="left">We consider all the YouTube videos to form a directed graph, where each video is a node in the graph. If a video <em>b</em> is in the related video list (first 20 only) of a video <em>a</em>, then there is a directed edge from <em>a</em> to <em>b</em>. Our crawler uses a breadth-first search to find videos in the graph. We define the initial set of 0-depth video IDs, which the crawler reads in to a queue at the beginning of the crawl. When processing each video, it checks the list of related videos and adds any new ones to the queue.</p>
+        <p align="left">Given a video ID, the crawler first extracts information from the <a href="http://www.youtube.com/dev_docs">YouTube API</a>, which contains all the meta-data except age, category and related videos. The crawler then scrapes the video's webpage to obtain the remaining information.We record the following information of a YouTube video in order; they are divided by '\t' in the data file.</p>
+        <table width="600" border="1">
+          <tbody><tr>
+            <td>video ID </td>
+            <td>an 11-digit string, which is unique</td>
+          </tr>
+          <tr>
+            <td>uploader</td>
+            <td>a string of the  video uploader's username</td>
+          </tr>
+          <tr>
+            <td>age</td>
+            <td>an integer  number of days between the date when the video was uploaded and Feb.15, 2007 (YouTube's establishment)</td>
+          </tr>
+          <tr>
+            <td>category</td>
+            <td>a string of the video category chosen by the uploader</td>
+          </tr>
+          <tr>
+            <td>length</td>
+            <td>an integer number of the video length</td>
+          </tr>
+          <tr>
+            <td>views</td>
+            <td>an integer number of the views</td>
+          </tr>
+          <tr>
+            <td>rate</td>
+            <td>a float number of the video rate</td>
+          </tr>
+          <tr>
+            <td>ratings</td>
+            <td>an integer number of the ratings</td>
+          </tr>
+          <tr>
+            <td>comments</td>
+            <td>an integer number of the comments</td>
+          </tr>
+          <tr>
+            <td>related IDs </td>
+            <td>up to 20 strings of the related video IDs </td>
+          </tr>
+        </tbody></table>
+        <p align="left">Our first crawl was on February 22nd, 2007, and started with the initial set of videos from the list of "Recently Featured", "Most Viewed", "Top Rated" and "Most Discussed", for "Today", "This Week", "This Month" and "All Time", which totalled 189 unique videos on that day. The crawl went to more than four depths, finding approximately 750 thousand videos in about five days. In the following weeks we ran the the crawler every two to three days, each time defining the initial set of videos from the list of "Most Viewed", "Top Rated", and "Most Discussed", for "Today" and "This Week", which is about 200 to 300 videos. On average, the crawl finds 73 thousand distinct videos each time in less than 9 hours.</p>
+        <p align="left">All the 35 datasets can be downloaded from here. In each package, there are: (1) "0.txt", "1.txt", "2.txt" and "3.txt" (and "4.txt" in "0222.zip"), storing the video data of depth 0, 1, 2 and 3 respectively; (2) "log.txt", a log file indicating the start and finsh time, number of videos crawled and the duration of each depth.</p>
+        <table width="800" border="1">
+          <tbody><tr>
+            <td width="30"><strong>No.</strong></td>
+            <td width="150"><strong>File (click to download) </strong></td>
+            <td width="120"><strong>Date</strong></td>
+            <td width="135"><strong>Total Crawled Videos</strong></td>
+            <td width="120"><strong>Duration (second) </strong></td>
+            <td><strong>Note</strong></td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0222.zip">0222.zip</a></td>
+            <td>Feb. 22nd, 2007 </td>
+            <td align="right">749361</td>
+            <td align="right">432589</td>
+            <td>crawled to fifth depth, but did not finish </td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0301.zip">0301.zip</a></td>
+            <td>Mar. 1st, 2007 </td>
+            <td align="right">155513</td>
+            <td align="right">93352</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0302.zip">0302.zip</a></td>
+            <td>Mar. 2nd, 2007 </td>
+            <td align="right">10324</td>
+            <td align="right">4692</td>
+            <td>only crawled three depths</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0303.zip">0303.zip</a></td>
+            <td>Mar. 3rd, 2007 </td>
+            <td align="right">68343</td>
+            <td align="right">30898</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td width="30">5</td>
+            <td width="150"><a href="http://netsg.cs.sfu.ca/youtubedata/0305.zip">0305.zip</a></td>
+            <td width="120">Mar. 5th, 2007 </td>
+            <td width="135" align="right">65754</td>
+            <td align="right">21578</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td width="30">6</td>
+            <td width="150"><a href="http://netsg.cs.sfu.ca/youtubedata/0306.zip">0306.zip</a></td>
+            <td width="120">Mar. 6th, 2007 </td>
+            <td width="135" align="right">42775</td>
+            <td align="right">14203</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0309.zip">0309.zip</a></td>
+            <td>Mar. 9th, 2007 </td>
+            <td align="right">64239</td>
+            <td align="right">29681</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0313.zip">0313.zip</a></td>
+            <td>Mar. 13th, 2007 </td>
+            <td align="right">100382</td>
+            <td align="right">42383</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0314.zip">0314.zip</a></td>
+            <td>Mar. 14th, 2007 </td>
+            <td align="right">71347</td>
+            <td align="right">31362</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0315.zip">0315.zip</a></td>
+            <td>Mar. 15th, 2007 </td>
+            <td align="right">45338</td>
+            <td align="right">19068</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0316.zip">0316.zip</a></td>
+            <td>Mar. 16th, 2007 </td>
+            <td align="right">42628</td>
+            <td align="right">17925</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0318.zip">0318.zip</a></td>
+            <td>Mar. 18th, 2007 </td>
+            <td align="right">63725</td>
+            <td align="right">32160</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0320.zip">0320.zip</a></td>
+            <td>Mar. 20th, 2007 </td>
+            <td align="right">45239</td>
+            <td align="right">18128</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0322.zip">0322.zip</a></td>
+            <td>Mar. 22nd, 2007 </td>
+            <td align="right">53156</td>
+            <td align="right">21199</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>15</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0325.zip">0325.zip</a></td>
+            <td>Mar. 25th, 2007 </td>
+            <td align="right">62327</td>
+            <td align="right">24960</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>16</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0327.zip">0327.zip</a></td>
+            <td>Mar. 27th, 2007 </td>
+            <td align="right">50940</td>
+            <td align="right">19849</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>17</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0329.zip">0329.zip</a></td>
+            <td>Mar. 29th, 2007</td>
+            <td align="right">103476</td>
+            <td align="right">47433</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>18</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0403.zip">0403.zip</a></td>
+            <td>Apr. 3rd, 2007 </td>
+            <td align="right">101693</td>
+            <td align="right">39617</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0410.zip">0410.zip</a></td>
+            <td>Apr. 10th, 2007 </td>
+            <td align="right">206590</td>
+            <td align="right">120455</td>
+            <td>fourth depth was not completed</td>
+          </tr>
+          <tr>
+            <td>20</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0413.zip">0413.zip</a></td>
+            <td>Apr. 13th, 2007 </td>
+            <td align="right">83712</td>
+            <td align="right">36535</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>21</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0418.zip">0418.zip</a></td>
+            <td>Apr. 18th, 2007 </td>
+            <td align="right">91822</td>
+            <td align="right">35555</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>22</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0420.zip">0420.zip</a></td>
+            <td>Apr. 20th, 2007 </td>
+            <td align="right">112259</td>
+            <td align="right">90939</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>23</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0422.zip">0422.zip</a></td>
+            <td>Apr. 22nd, 2007 </td>
+            <td align="right">89017</td>
+            <td align="right">29036</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>24</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0424.zip">0424.zip</a></td>
+            <td>Apr. 24th, 2007 </td>
+            <td align="right">76936</td>
+            <td align="right">24571</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>25</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0426.zip">0426.zip</a></td>
+            <td>Apr. 26th, 2007 </td>
+            <td align="right">62897</td>
+            <td align="right">20433</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>26</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0428.zip">0428.zip</a></td>
+            <td>Apr. 28th, 2007 </td>
+            <td align="right">71794</td>
+            <td align="right">21455</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>27</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0430.zip">0430.zip</a></td>
+            <td>Apr. 30th, 2007 </td>
+            <td align="right">84675</td>
+            <td align="right">26874</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>28</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0502.zip">0502.zip</a></td>
+            <td>May 2nd, 2007 </td>
+            <td align="right">39238</td>
+            <td align="right">13639</td>
+            <td>fourth depth was not completed due to networking problem</td>
+          </tr>
+          <tr>
+            <td>29</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0505.zip">0505.zip</a></td>
+            <td>May 5th, 2007 </td>
+            <td align="right">62203</td>
+            <td align="right">26814</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>30</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0507.zip">0507.zip</a></td>
+            <td>May 7th, 2007 </td>
+            <td align="right">62440</td>
+            <td align="right">19911</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>31</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0509.zip">0509.zip</a></td>
+            <td>May 9th, 2007 </td>
+            <td align="right">67939</td>
+            <td align="right">21681</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>32</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0511.zip">0511.zip</a></td>
+            <td>May 11th, 2007 </td>
+            <td align="right">66595</td>
+            <td align="right">20531</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>33</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0513.zip">0513.zip</a></td>
+            <td>May 13th, 2007 </td>
+            <td align="right">67370</td>
+            <td align="right">21312</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>34</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0515.zip">0515.zip</a></td>
+            <td>May 15th, 2007 </td>
+            <td align="right">45071</td>
+            <td align="right">21312</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>35</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0518.zip">0518.zip</a></td>
+            <td>May 18th, 2007 </td>
+            <td align="right">51873</td>
+            <td align="right">15880</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody></table>
+      <p align="left">The new data crawled in 2008 are as followings: </p>
+        <table width="800" border="1">
+          <tbody><tr>
+            <td width="30"><strong>No.</strong></td>
+            <td width="150"><strong>File (click to download) </strong></td>
+            <td width="120"><strong>Date</strong></td>
+            <td width="135"><strong>Total Crawled Videos</strong></td>
+            <td width="120"><strong>Duration (second) </strong></td>
+            <td><strong>Note</strong></td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080327.zip">080327.zip</a></td>
+            <td>Mar. 27th, 2008 </td>
+            <td align="right">310005</td>
+            <td align="right">72984</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080329.zip">080329.zip</a></td>
+            <td>Mar. 29th, 2008 </td>
+            <td align="right">186671</td>
+            <td align="right">44014</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080331.zip">080331.zip</a></td>
+            <td>Mar. 31st, 2008 </td>
+            <td align="right">150382</td>
+            <td align="right">38292</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080402.zip">080402.zip</a></td>
+            <td>Apr. 2nd, 2008 </td>
+            <td align="right">154372</td>
+            <td align="right">31394</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080404.zip">080404.zip</a></td>
+            <td>Apr. 4th, 2008 </td>
+            <td align="right">155213</td>
+            <td align="right">31903</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080406.zip">080406.zip</a></td>
+            <td>Apr. 6th, 2008 </td>
+            <td align="right">128499</td>
+            <td align="right">30830</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080408.zip">080408.zip</a></td>
+            <td>Apr. 8th, 2008 </td>
+            <td align="right">133279</td>
+            <td align="right">32044</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080412.zip">080412.zip</a></td>
+            <td>Apr. 12th, 2008 </td>
+            <td align="right">123843</td>
+            <td align="right">32691</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080414.zip">080414.zip</a></td>
+            <td>Apr. 14th, 2008 </td>
+            <td align="right">86737</td>
+            <td align="right">17580</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080416.zip">080416.zip</a></td>
+            <td>Apr. 16th, 2008 </td>
+            <td align="right">101249</td>
+            <td align="right">20779</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080418.zip">080418.zip</a></td>
+            <td>Apr. 18th, 2008 </td>
+            <td align="right">114269</td>
+            <td align="right">27237</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080422.zip">080422.zip</a></td>
+            <td>Apr. 22nd, 2008 </td>
+            <td align="right">114269</td>
+            <td align="right">28355</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080424.zip">080424.zip</a></td>
+            <td>Apr. 24th, 2008 </td>
+            <td align="right">110232</td>
+            <td align="right">30862</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080426.zip">080426.zip</a></td>
+            <td>Apr. 26th, 2008 </td>
+            <td align="right">68205</td>
+            <td align="right">16975</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>15</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080428.zip">080428.zip</a></td>
+            <td>Apr. 28th, 2008 </td>
+            <td align="right">74816</td>
+            <td align="right">17760</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>16</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080430.zip">080430.zip</a></td>
+            <td>Apr. 30th, 2008 </td>
+            <td align="right">102969</td>
+            <td align="right">21505</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>17</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080502.zip">080502.zip</a></td>
+            <td>May 2nd, 2008 </td>
+            <td align="right">96684</td>
+            <td align="right">25334</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>18</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080504.zip">080504.zip</a></td>
+            <td>May 4th, 2008 </td>
+            <td align="right">69169</td>
+            <td align="right">20761</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080506.zip">080506.zip</a></td>
+            <td>May 6th, 2008 </td>
+            <td align="right">98766</td>
+            <td align="right">19694</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>20</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080508.zip">080508.zip</a></td>
+            <td>May 8th, 2008 </td>
+            <td align="right">84197</td>
+            <td align="right">17148</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>21</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080510.zip">080510.zip</a></td>
+            <td>May 10th, 2008 </td>
+            <td align="right">85094</td>
+            <td align="right">23972</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>22</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080512.zip">080512.zip</a></td>
+            <td>May 12th, 2008 </td>
+            <td align="right">91306</td>
+            <td align="right">25485</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>23</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080514.zip">080514.zip</a></td>
+            <td>May 14th, 2008 </td>
+            <td align="right">89824</td>
+            <td align="right">39771</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>24</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080516.zip">080516.zip</a></td>
+            <td>May 16th, 2008 </td>
+            <td align="right">88333</td>
+            <td align="right">21908</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>25</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080518.zip">080518.zip</a></td>
+            <td>May 18th, 2008 </td>
+            <td align="right">90320</td>
+            <td align="right">25645</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>26</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080520.zip">080520.zip</a></td>
+            <td>May 20th, 2008 </td>
+            <td align="right">78123</td>
+            <td align="right">18765</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>27</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080522.zip">080522.zip</a></td>
+            <td>May 22nd, 2008 </td>
+            <td align="right">73417</td>
+            <td align="right">15274</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>28</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080524.zip">080524.zip</a></td>
+            <td>May 24th, 2008 </td>
+            <td align="right">81537</td>
+            <td align="right">18678</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>29</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080526.zip">080526.zip</a></td>
+            <td>May 26th, 2008 </td>
+            <td align="right">73165</td>
+            <td align="right">19818</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>30</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080528.zip">080528.zip</a></td>
+            <td>May 28th, 2008 </td>
+            <td align="right">69112</td>
+            <td align="right">23274</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>31</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080530.zip">080530.zip</a></td>
+            <td>May 30th, 2008 </td>
+            <td align="right">72138</td>
+            <td align="right">17795</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>32</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080601.zip">080601.zip</a></td>
+            <td>Jun. 1st, 2008 </td>
+            <td align="right">69987</td>
+            <td align="right">17197</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>33</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080603.zip">080603.zip</a></td>
+            <td>Jun. 3rd, 2008 </td>
+            <td align="right">84000</td>
+            <td align="right">18900</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>34</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080605.zip">080605.zip</a></td>
+            <td>Jun. 5th, 2008 </td>
+            <td align="right">75995</td>
+            <td align="right">-</td>
+            <td>The crawl paused due to the networking problem.</td>
+          </tr>
+          <tr>
+            <td>35</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080609.zip">080609.zip</a></td>
+            <td>Jun. 9th, 2008 </td>
+            <td align="right">77603</td>
+            <td align="right">15333</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>36</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080611.zip">080611.zip</a></td>
+            <td>Jun. 11th, 2008 </td>
+            <td align="right">72138</td>
+            <td align="right">14528</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>37</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080613.zip">080613.zip</a></td>
+            <td>Jun. 13th, 2008 </td>
+            <td align="right">72042</td>
+            <td align="right">21381</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>38</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080615.zip">080615.zip</a></td>
+            <td>Jun. 15th, 2008 </td>
+            <td align="right">68736</td>
+            <td align="right">20136</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>39</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080617.zip">080617.zip</a></td>
+            <td>Jun. 17th, 2008 </td>
+            <td align="right">74689</td>
+            <td align="right">21144</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>40</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080619.zip">080619.zip</a></td>
+            <td>Jun. 19th, 2008 </td>
+            <td align="right">72542</td>
+            <td align="right">21808</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>41</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080621.zip">080621.zip</a></td>
+            <td>Jun. 21st, 2008 </td>
+            <td align="right">55535</td>
+            <td align="right">17371</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>42</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080623.zip">080623.zip</a></td>
+            <td>Jun. 23rd, 2008 </td>
+            <td align="right">59165</td>
+            <td align="right">15304</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>43</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080625.zip">080625.zip</a></td>
+            <td>Jun. 25th, 2008 </td>
+            <td align="right">53232</td>
+            <td align="right">18606</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>44</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080627.zip">080627.zip</a></td>
+            <td>Jun. 27th, 2008 </td>
+            <td align="right">65906</td>
+            <td align="right">17314</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>45</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080629.zip">080629.zip</a></td>
+            <td>Jun. 29th, 2008 </td>
+            <td align="right">52219</td>
+            <td align="right">13496</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>46</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080701.zip">080701.zip</a></td>
+            <td>Jul. 1st, 2008 </td>
+            <td align="right">62065</td>
+            <td align="right">15565</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>47</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080703.zip">080703.zip</a></td>
+            <td>Jul. 3rd, 2008 </td>
+            <td align="right">62065</td>
+            <td align="right">14607</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>48</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080705.zip">080705.zip</a></td>
+            <td>Jul. 5th, 2008 </td>
+            <td align="right">51555</td>
+            <td align="right">15052</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>49</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080707.zip">080707.zip</a></td>
+            <td>Jul. 7th, 2008 </td>
+            <td align="right">63053</td>
+            <td align="right">18723</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>50</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080709.zip">08079.zip</a></td>
+            <td>Jul. 9th, 2008 </td>
+            <td align="right">54981</td>
+            <td align="right">16367</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>51</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080711.zip">080711.zip</a></td>
+            <td>Jul. 11th, 2008 </td>
+            <td align="right">65412</td>
+            <td align="right">19833</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>52</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080713.zip">080713.zip</a></td>
+            <td>Jul. 13th, 2008 </td>
+            <td align="right">48748</td>
+            <td align="right">18690</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>53</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080715.zip">080715.zip</a></td>
+            <td>Jul. 15th, 2008 </td>
+            <td align="right">54075</td>
+            <td align="right">20403</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>54</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080717.zip">080717.zip</a></td>
+            <td>Jul. 17th, 2008 </td>
+            <td align="right">48884</td>
+            <td align="right">18205</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>55</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080719.zip">080719.zip</a></td>
+            <td>Jul. 19th, 2008 </td>
+            <td align="right">72773</td>
+            <td align="right">27226</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>56</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080721.zip">080721.zip</a></td>
+            <td>Jul. 21st, 2008 </td>
+            <td align="right">46868</td>
+            <td align="right">19656</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>57</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080723.zip">080723.zip</a></td>
+            <td>Jul. 23rd, 2008 </td>
+            <td align="right">50290</td>
+            <td align="right">22334</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>58</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080725.zip">080725.zip</a></td>
+            <td>Jul. 25th, 2008 </td>
+            <td align="right">78680</td>
+            <td align="right">31925</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>59</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080727.zip">080727.zip</a></td>
+            <td>Jul. 27th, 2008 </td>
+            <td align="right">60205</td>
+            <td align="right">32802</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody></table>
+      <p align="left">&nbsp;</p></td>
+    </tr>
+    <tr>
+      <td><p class="SECTION"><br>
+      2. Datasets of Updating Crawl </p>
+        <p>To study the growth trend of the video popularity, we also updated the statistics of some previously found videos. For this crawl we only retrieve the number of views for relatively new videos (uploaded after February 15th, 2007). This crawl is performed once a week from March 5th to April 16th 2007, which results in seven datasets.</p>
+        <p>The 7 datasets can be downloaded from here. In each package, there are: (1) "update.txt", storing the updated video data; it contains video ID, views, rate, ratings and comments; (2)  "id.txt", containing all the video IDs to be updated; (3) "log.txt", a log file indicating the start and finish time, number of videos updated and the duration.</p>
+        <table border="1">
+        <tbody><tr>
+          <td width="30"><strong>No.</strong></td>
+          <td width="150"><strong>File (click to download) </strong></td>
+          <td width="120"><strong>Date</strong></td>
+          <td width="150"><strong>Total Updated Videos</strong></td>
+          <td width="150"><strong>Duration (second) </strong></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0305u.zip">0305u.zip</a></td>
+          <td>Mar. 5th, 2007 </td>
+          <td align="right">53818</td>
+          <td align="right">4858</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0312u.zip">0312u.zip</a></td>
+          <td>Mar. 12th, 2007 </td>
+          <td align="right">79091</td>
+          <td align="right">12931</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0319u.zip">0319u.zip</a></td>
+          <td>Mar. 19th, 2007 </td>
+          <td align="right">140702</td>
+          <td align="right">12489</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0326u.zip">0326u.zip</a></td>
+          <td>Mar. 26th, 2007 </td>
+          <td align="right">185784</td>
+          <td align="right">16473</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0402u.zip">0402u.zip</a></td>
+          <td>Apr. 2nd, 2007 </td>
+          <td align="right">217170</td>
+          <td align="right">17541</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0409u.zip">0409u.zip</a></td>
+          <td>Apr. 9th, 2007 </td>
+          <td align="right">247526</td>
+          <td align="right">20656</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/0416u.zip">0416u.zip</a></td>
+          <td>Apr. 16th, 2007 </td>
+          <td align="right">316313</td>
+          <td align="right">27145</td>
+        </tr>
+      </tbody></table>
+      <p>In 2008, we updated the statistics of 161085 videos once a week for 21 weeks. The new data are also presented here: </p>
+        <table border="1">
+        <tbody><tr>
+          <td width="30"><strong>No.</strong></td>
+          <td width="150"><strong>File (click to download) </strong></td>
+          <td width="120"><strong>Date</strong></td>
+          <td width="150"><strong>Duration (second) </strong></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080416u.zip">080416u.zip</a></td>
+          <td>Apr. 16th, 2008 </td>
+          <td align="right">-</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080423u.zip">080423u.zip</a></td>
+          <td>Apr. 23rd, 2008 </td>
+          <td align="right">9694</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080430u.zip">080430u.zip</a></td>
+          <td>Apr. 30th, 2008 </td>
+          <td align="right">9895</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080508u.zip">080508u.zip</a></td>
+          <td>May 8th, 2008 </td>
+          <td align="right">6227</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080514u.zip">080514u.zip</a></td>
+          <td>May 14th, 2008 </td>
+          <td align="right">10474</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080521u.zip">080521u.zip</a></td>
+          <td>May 21st, 2008 </td>
+          <td align="right">9968</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080528u.zip">080528u.zip</a></td>
+          <td>May 28th, 2008 </td>
+          <td align="right">10846</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080604u.zip">080604u.zip</a></td>
+          <td>Jun. 4th, 2008 </td>
+          <td align="right">12064</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080611u.zip">080611u.zip</a></td>
+          <td>Jun. 11th, 2008 </td>
+          <td align="right">12476</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080618u.zip">080618u.zip</a></td>
+          <td>Jun. 18th, 2008 </td>
+          <td align="right">10244</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080625u.zip">080625u.zip</a></td>
+          <td>Jun. 25th, 2008 </td>
+          <td align="right">8651</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080702u.zip">080702u.zip</a></td>
+          <td>Jul. 2nd, 2008 </td>
+          <td align="right">8659</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080709u.zip">080709u.zip</a></td>
+          <td>Jul. 9th, 2008 </td>
+          <td align="right">8816</td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080716u.zip">080716u.zip</a></td>
+          <td>Jul. 16th, 2008 </td>
+          <td align="right">13399</td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080723u.zip">080723u.zip</a></td>
+          <td>Jul. 23rd, 2008 </td>
+          <td align="right">14716</td>
+        </tr>
+        <tr>
+          <td>16</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080730u.zip">080730u.zip</a></td>
+          <td>Jul. 30th, 2008 </td>
+          <td align="right">13362</td>
+        </tr>
+        <tr>
+          <td>17</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080806u.zip">080806u.zip</a></td>
+          <td>Aug. 6th, 2008 </td>
+          <td align="right">19496</td>
+        </tr>
+        <tr>
+          <td>18</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080813u.zip">080813u.zip</a></td>
+          <td>Aug. 13th, 2008 </td>
+          <td align="right">14492</td>
+        </tr>
+        <tr>
+          <td>19</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080820u.zip">080820u.zip</a></td>
+          <td>Aug. 20th, 2008 </td>
+          <td align="right">14784</td>
+        </tr>
+        <tr>
+          <td>20</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080827u.zip">080827u.zip</a></td>
+          <td>Aug. 27th, 2008 </td>
+          <td align="right">14476</td>
+        </tr>
+        <tr>
+          <td>21</td>
+          <td><a href="http://netsg.cs.sfu.ca/youtubedata/080903u.zip">080903u.zip</a></td>
+          <td>Sep. 3rd, 2008 </td>
+          <td align="right">14683</td>
+        </tr>
+      </tbody></table>
+      <p>&nbsp;</p></td>
+    </tr>
+    <tr>
+      <td><p class="SECTION"><br>
+      3. Datasets of Video File Size and Bitrate</p>
+        <p>We have also separately crawled the video file size and video bitrate information. To get the file size, the crawler retrieves the response information from the server when requesting to download the video file and extracts the information on the size of the download. Some videos have the bitrate embedded in the FLV video meta-data, which the crawler extracts after downloading the meta-data of the video file.</p>
+        <p>In "0523.zip", there are: "idlength.txt", containing the video IDs and video lengths; "size.txt", adding the video file size (integer number of Byte) into the previous information; "log.txt", a log file.</p>
+        <p>In "0628.zip", there are: "idlength.txt", containing the video IDs and video lengths; "rate.txt", adding the video bitrate (double number of kbps) into the previous information; the VBR videos result in invalid bitrate value, and we use video lengths and sizes to calculate the average bitrate; "log.txt", a log file.</p>
+        <p>In "080908sizerate.zip", there are:  "idlength.txt", containing the video IDs and video lengths; "sizerate.txt", adding the video file size (integer number) and bitrate (double number of kbps) into the previous information; the VBR videos result in invalid bitrate value, and we record a "VBR"; "log.txt", a log file.</p>
+        <table width="800" border="1">
+          <tbody><tr>
+            <td width="30"><strong>No.</strong></td>
+            <td width="150"><strong>File (click to download) </strong></td>
+            <td width="120"><strong>Date</strong></td>
+            <td width="135"><strong>Total Crawled</strong></td>
+            <td width="120"><strong>Duration (second) </strong></td>
+            <td><strong>Note</strong></td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0523.zip">0523.zip</a></td>
+            <td>May 23rd, 2007 </td>
+            <td align="right">199691</td>
+            <td align="right">88470</td>
+            <td>video file size</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0628.zip">0628.zip</a></td>
+            <td>Jun. 28th, 2007 </td>
+            <td align="right">199691</td>
+            <td align="right">81082</td>
+            <td>video bitrate</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080908sizerate.zip">080908sizerate.zip</a></td>
+            <td>Sep. 8th, 2008 </td>
+            <td align="right">153710</td>
+            <td align="right">104804</td>
+            <td>video file size and bitrate</td>
+          </tr>
+        </tbody></table>
+        <p>&nbsp;</p></td>
+    </tr>
+    <tr>
+      <td><p class="SECTION"><br>
+      4. Datasets of User Information </p>
+        <p>We have collected the information about YouTube users. The crawler retrieves information on the number of uploaded videos and friends of each user from the YouTube API, for a total of more than 1 million users. There are: "userid.txt", containing all the username collected in previous datasets; "user.txt", containing the information of number of uploads, watches and friends in order.</p>
+        <p>In 2008, we have also re-collected the information about YouTube users, for a total of more than 2 million users. There are: "userid.txt", containing all the username collected in all normal datasets; "user.txt", containing the information of number of uploads and friends in order.</p>
+        <table width="800" border="1">
+          <tbody><tr>
+            <td width="30"><strong>No.</strong></td>
+            <td width="150"><strong>File (click to download) </strong></td>
+            <td width="120"><strong>Date</strong></td>
+            <td width="135"><strong>Total Updated Users </strong></td>
+            <td width="120"><strong>Duration (second) </strong></td>
+            <td><strong>Note</strong></td>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/0528.zip">0528.zip</a></td>
+            <td>May. 28th, 2007 </td>
+            <td align="right">1062324</td>
+            <td align="right">68397</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><a href="http://netsg.cs.sfu.ca/youtubedata/080903user.zip">080903user.zip</a></td>
+            <td>Sep. 3rd, 2008 </td>
+            <td align="right">2139109</td>
+            <td align="right">254709</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody></table>
+        <p>&nbsp;</p></td>
+    </tr>
+    <tr>
+    <td><p align="center"><img src="./YouTube Dataset_files/count.cgi" align="absmiddle">&nbsp;</p>
+        <p align="center"><a href="http://www.ipstat.com/cgi-bin/stats?name=youtubedata&amp;tz=-8"><img src="http://www.ipstat.com/cgi-bin/ipstat?name=youtubedata" height="1" width="1" border="0"></a></p>
+      <p align="center">Copyright 2008 © NETSG, School of Computing Science, Simon Fraser University</p></td>
+    </tr>
+  </tbody></table>
+</center>
+
+<script src="./YouTube Dataset_files/urchin.js.download" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-1412705-5";
+urchinTracker();
+</script>
+
+
+</body></html>

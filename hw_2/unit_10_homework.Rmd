@@ -1,0 +1,271 @@
+---
+title: "Politics Are Afoot!"
+author: 'w203: Statistics for Data Science'
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+# The Setup 
+
+There is *a lot* of money that is spent in politics in Presidential election years. So far, estimates have the number at about $11,000,000,000 (11 billion USD). For context, in 2019 Twitter's annual revenue was about \$3,500,000,000 (3.5 billion USD). 
+
+# The work 
+
+Install the package, `fec16`. 
+
+```{r}
+## install.packages('fec16')
+```
+
+This package is a compendium  of spending and results from the 2016 election cycle. In this dataset are 9 different datasets that cover: 
+
+- `candidates`: candidate attributes, like their name, a unique id of the candidate, the election year under consideration, the office they're running for, etc. 
+- `results_house`: race attributes, like the name of the candidates running in the election, a unique id of the candidate, the number of `general_votes` garnered by each candidate, and other information. 
+- `campaigns`: financial information for each house & senate campaign. This includes a unique candidate id, the total receipts (how much came in the doors), and total disbursements (the total spent by the campaign), the total contributed by party central committees, and other information. 
+
+# Your task 
+
+Describe the relationship between spending on a candidate's behalf and the votes they receive.
+
+# Your work 
+
+- We want to keep this work *relatively* constrained, which is why we're providing you with data through the `fec16` package. It is possible to gather all the information from current FEC reports, but it would require you to make a series of API calls that would pull us away from the core modeling tasks that we want you to focus on instead. 
+- Throughout this assignment, limit yourself to functions that are  within the `tidyverse` family of packages: `dplyr`, `ggplot`, `patchwork`, and `magrittr` for wrangling and exploration and `base`, `stats`, `sandwich` and `lmtest` for modeling and testing. You do not *have* to use these packages; but try to limit yourself to using only these. 
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(patchwork)
+library(sandwich)
+library(lmtest)
+library(fec16)
+theme_set(theme_minimal())
+knitr::opts_chunk$set(dpi = 300)
+```
+
+```{r load data}
+candidates    <- fec16::candidates
+results_house <- fec16::results_house
+campaigns     <- fec16::campaigns
+```
+## 1. What does the distribution of votes and of spending look like? 
+
+("ggThemeAssist")
+1. (3 points) In separate histograms, show both the distribution of votes (measured in `results_house$general_percent` for now) and spending (measured in `ttl_disb`).  Use a log transform if appropriate for each visualization.  How would you describe what you see in these two plots?
+
+```{r, message = TRUE, warning=FALSE}
+library("ggThemeAssist")
+general_percent_histogram <- ggplot(data=subset(results_house, !is.na(general_percent)), aes(x=general_percent)) + 
+geom_histogram(bins = 150) + 
+  labs(
+    title = 'Percentage of Votes Won in the Campaign', 
+    x = 'Vote Share', y = 'Count') + 
+  theme(axis.title = element_text(size = 13), 
+    plot.title = element_text(family = "AvantGarde", 
+        size = 16, hjust = 0.5, vjust = 0), 
+    panel.background = element_rect(fill = "gray79", 
+        colour = "white", linetype = "dotted"), 
+    plot.background = element_rect(fill = "antiquewhite1"))
+general_percent_histogram
+
+
+ttl_disb_histogram <- ggplot(data=subset(campaigns, !is.na(ttl_disb)), aes(x=log10(ttl_disb))) + 
+geom_histogram(bins = 150) +  
+  labs(
+    title = 'Total Campaign Spending', x = 'Spending in $Millions', y = 'Count') +
+  scale_x_continuous(breaks=seq(0, 10, 1),labels = 10^(seq(0,10,1)-6)) +
+  theme(axis.title = element_text(size = 13), 
+    plot.title = element_text(family = "AvantGarde", 
+        size = 16, hjust = 0.5, vjust = 0), 
+    panel.background = element_rect(fill = "gray79", 
+        colour = "white", linetype = "dotted"), 
+    plot.background = element_rect(fill = "antiquewhite1"))
+
+general_percent_histogram / ttl_disb_histogram
+
+
+```
+> Looking at the voting distribution, we can see that most of the candidates received less than 15% of the total shares of the votes (far left side of the graph). Few of the candidates received the majority of the votes(far right side of the graphs). While the remainder of the candidnates received about 50% +/-(5-10%). 
+
+> Looking at the total amount of money spent by campaing, we can observe that the majority of the candidates spent close \$0.1M to \$3M. Very few campaigns spent less than or greater than aforemention amount. 
+
+
+## 2. Exploring the relationship between spending and votes. 
+
+2. (3 points) Create a new dataframe by joining `results_house` and `campaigns` using the `inner_join` function from `dplyr`. (We use the format `package::function` -- so `dplyr::inner_join`.) 
+
+
+```{r}
+
+results_house_and_campaign <- inner_join(results_house, campaigns, by = "cand_id")
+
+```
+
+
+3. (3 points) Produce a scatter plot of `general_votes` on the y-axis and `ttl_disb` on the x-axis. What do you observe about the shape of the joint distribution? 
+
+```{r, warning = FALSE}
+
+general_votes_vs_ttl_disb_plot <- results_house_and_campaign %>% 
+  ggplot() +
+  aes(x = ttl_disb/1000000, y = general_votes/1000) +
+  geom_point() +
+  labs(
+    title = 'Relationship Between Spending and Votes', 
+    x = 'Campaign Spending ($Millions)', 
+    y = 'Votes in General Election (Thousands)'
+  ) +
+  theme(axis.title = element_text(size = 13), 
+    plot.title = element_text(family = "AvantGarde", 
+        size = 16, hjust = 0.5, vjust = 0), 
+    panel.background = element_rect(fill = "gray79", 
+        colour = "white", linetype = "dotted"), 
+    plot.background = element_rect(fill = "antiquewhite1"))
+
+general_votes_vs_ttl_disb_plot 
+
+```
+> Looking at the graph, we can see that there are a lot of campaigns who garnered relatively small number of votes despite spending $millions (below 200,000 votes). A few campaigns, spent over $5 millions but not cracking over 200,000 votes (right side of the graph). Interestingly, we can also observe a very small number of campaigns garnered relatively very larger number of votes (over 600,000 votes) despite spending less than $1 million (top left of the graph).
+
+
+
+4. (3 points) Create a new variable to indicate whether each individual is a "Democrat", "Republican" or "Other Party". 
+  - Here's an example of how you might use `mutate` and `case_when` together to create a variable. 
+
+```
+starwars %>%
+  select(name:mass, gender, species) %>%
+  mutate(
+  type = case_when(
+    height > 200 | mass > 200 ~ "large",
+    species == "Droid"        ~ "robot",
+    TRUE                      ~ "other"
+    )
+  )
+```
+
+Once you've produced the new variable, plot your scatter plot again, but this time adding an argument into the `aes()` function that colors the points by party membership.  What do you observe about the distribution of all three variables?
+
+```{r, warning=FALSE}
+
+democrat_republican <- results_house_and_campaign %>% 
+  mutate(party = 
+           case_when(
+             cand_pty_affiliation == "REP" ~ "Rep",
+             cand_pty_affiliation == "DEM" ~ "Dem",
+             TRUE ~ "Other"
+           ))
+
+
+democrat_republican_plot <- democrat_republican %>% 
+  ggplot() +
+  aes(x = ttl_disb/1000000, y = general_votes/1000) +
+  geom_point(aes(col=party, stroke=as.integer(incumbent)), size=2.5) +
+  scale_color_manual(values=c("blue", "green", "red")) +
+  labs(
+    title = 'Relationship Between Spending and Votes', 
+    x = 'Campaign Spending ($Millions)', 
+    y = 'Votes in General Election (Thousands)'
+  ) +
+  theme(axis.title = element_text(size = 13), 
+    plot.title = element_text(family = "AvantGarde", 
+        size = 16, hjust = 0.5, vjust = 0), 
+    panel.background = element_rect(fill = "gray79", 
+        colour = "white", linetype = "dotted"), 
+    plot.background = element_rect(fill = "antiquewhite1"))
+
+democrat_republican_plot
+
+```
+
+> Looking at the graph, we can see that generally speaking, democrats and republicans got similar number of votes vs campaign spending. A couple of points to notes, it does look like some republicans spent more in campaigning than democrats while attanings about the same number of votes. Interesting point to note that partys other than democrat or republican spent relatively small amount of money while garnering very few votes. Furthermore, there seems to be a democratic campaign and an other party campaign that got the most votes while spending less than $1 million. 
+
+
+
+# Produce a Descriptive Model 
+
+5. (5 Points) Given your observations, produce a linear model that you think does a good job at describing the relationship between candidate spending and votes they receive. You should decide what transformation to apply to spending (if any), what transformation to apply to votes (if any) and also how to include the party affiliation.
+
+> For model_1, I will use just the total spending variable and see what results the model will produce. 
+
+$$ Votes = \beta_0 + \beta_1\cdot \mbox {log(Total disbursements)} $$
+
+$\beta_0$ will be the votes that a candidate gets with no additional variables.
+$\beta_1$ will be the incremental votes resulting by increasing spending by 1%
+
+```{r, warning=FALSE}
+
+results_house_and_campaign <- inner_join(results_house, campaigns, by = "cand_id")
+
+#dropping na values form general_votes column and ttl_disb column
+cleaned_data1 <- results_house_and_campaign %>%
+  drop_na(general_votes, ttl_disb)
+
+model_1 <- lm(general_votes ~ log(ttl_disb+1), data = cleaned_data1)
+
+summary(model_1)
+
+```
+> see question 7 for discussion of model_1
+
+
+
+$$ Votes = \beta_0 + \beta_1\cdot Incumbent + \beta_2\cdot \mbox {log(Total disbursements)} + \beta_3 \cdot party $$
+$\beta_0$ will be the votes that a candidate gets with no additional variables.
+$\beta_1$ votes resulting by increasing spending by 1%
+$\beta_2$ votes that an incumbent gets.
+$\beta_3$ votes resulting for being associated with a party.
+$\beta_4$ votes resulting from the election being in a different States.
+
+
+```{r, warning=FALSE}
+
+#creating a new column by with Dem, Rep, other Designations
+#create a new column by designating if the candidate is incumbent or challenger
+cleaned_data2 <- cleaned_data1 %>% 
+  mutate(party_2 = 
+           case_when(
+             cand_pty_affiliation=="REP" ~ "REP",
+             cand_pty_affiliation=="DEM" ~ "DEM",
+             TRUE                      ~ "Other")
+         ) %>% 
+  mutate(INCU = ifelse(incumbent=="TRUE","Incumbent","Challenger"))
+
+#categorizing incumbent 
+cleaned_data2$INCU<- as.factor(cleaned_data2$INCU)
+
+model_2 <- lm(general_votes ~ log(ttl_disb+1) + incumbent + party_2 + state, data = cleaned_data2)
+summary(model_2)
+
+
+```
+> see question 7 for discussion of model_2
+
+6. (3 points) Evaluate the Large-Sample Linear Model Assumptions
+
+> Large-Sample Linear Models have two assumptions; Unique BLP exits and I.I.D
+> Since we have a large enough sample, it is very likely that a unique BLP exists, satisfying our first assumption. 
+> Although for our state coefficient, one can argue that neighboring states affect each other, rendering I.I.D. as obsolete for us. However, we will assume that each state has no effect on the other and we would assume that they are independent of each other.  
+
+7. (3 points) Interpret the model coefficients you estimate.
+
+> After running our linear regression, we can see that the p-value is significant and we can reject the null hypothesis that the total spending has no effect on number of votes. In other words, total spending(ttl_disb) has a significant effect on the number of votes. Inreasing spending by 1% increases the number of votes on average by 14364 votes. 
+
+>let's see if we can make our model fit better by introducing three more coefficients; incumbuncy, party, and state. 
+
+
+> Looks like model_2 does a better job (note: introducing more coefficients may make our model even better, I decided to just use the above 4 coefficient for this HW). Looking at the regression, I will list some of the interesting things that exists in the above table.
+
+- R-square increased in our second model as expected. 
+- Total spending coefficient, incumbency are all significant. Therefore, it is safe to say each one has an effect on the number of votes. As for the states, some of them are significant and some are not, but jointly they do improve the adjusted R-square to ~ 65%. 
+- looks like being an incumbent will garner an additional ~49,000 votes
+- Being independent can cost ~73,000 votes and and is significant
+- Being a democrat or republican is not significant and fail to affect the outcome. 
+
+
+- Tasks to keep in mind as you're writing about your model: 
+    - At the time that you're writing and interpreting your regression coefficients you'll be *deep* in the analysis. Nobody will know more about the data than you do, at that point. *So, although it will feel tedious, be descriptive and thorough in describing your observations.* 
+    - It can be hard to strike the balance between: on the one hand,  writing enough of the technical underpinnings to know that your model meets the assumptions that it must; and, on the other hand, writing little enough about the model assumptions that the implications of the model can still be clear. We're starting this practice now, so that by the end of Lab 2 you will have had several chances to strike this balance.
